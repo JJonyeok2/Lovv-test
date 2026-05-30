@@ -8,6 +8,9 @@ type Preference = {
   tag: string
   signals: string[]
   weakSignal: string
+  issue: string
+  editorialNote: string
+  routeHint: string
 }
 
 const preferenceStorageKey = 'lovv.preference'
@@ -19,6 +22,9 @@ const preferences: Preference[] = [
     tag: '역사',
     signals: ['역사 +2', '산책 +1', '혼잡 회피 +1', '로컬 미식 +1'],
     weakSignal: '사진 명소 - 약함',
+    issue: 'No. 01',
+    editorialNote: '오래된 골목, 낮은 담장, 천천히 머무는 하루에 가까워요.',
+    routeHint: '전통 거리 · 찻집 · 야경 산책',
   },
   {
     cityPair: '후쿠오카 · 부산',
@@ -26,6 +32,9 @@ const preferences: Preference[] = [
     tag: '미식',
     signals: ['미식 +2', '시장 +1', '축제 +1', '로컬 미식 +1'],
     weakSignal: '조용한 산책 - 약함',
+    issue: 'No. 02',
+    editorialNote: '시장과 포장마차, 바다 가까운 식탁을 따라 움직이는 여행이에요.',
+    routeHint: '시장 탐방 · 로컬 식당 · 항구 산책',
   },
   {
     cityPair: '오키나와 · 제주',
@@ -33,6 +42,9 @@ const preferences: Preference[] = [
     tag: '바다',
     signals: ['바다 +2', '휴식 +1', '자연 +1', '카페 산책 +1'],
     weakSignal: '도심 쇼핑 - 약함',
+    issue: 'No. 03',
+    editorialNote: '바다와 바람을 오래 바라보고, 일정 사이에 여백을 두는 쪽이에요.',
+    routeHint: '해변 드라이브 · 자연 전망 · 느린 카페',
   },
   {
     cityPair: '벳푸 · 온양',
@@ -40,6 +52,9 @@ const preferences: Preference[] = [
     tag: '온천',
     signals: ['온천 +2', '힐링 +1', '느린 일정 +1', '숙소 체류 +1'],
     weakSignal: '야간 축제 - 약함',
+    issue: 'No. 04',
+    editorialNote: '많이 보기보다 잘 쉬는 여행, 숙소와 동네의 리듬을 중시해요.',
+    routeHint: '온천 거리 · 로컬 식사 · 숙소 휴식',
   },
   {
     cityPair: '삿포로 · 강원',
@@ -47,6 +62,9 @@ const preferences: Preference[] = [
     tag: '자연',
     signals: ['자연 +2', '계절감 +1', '전망 +1', '로컬 음식 +1'],
     weakSignal: '혼잡 도심 - 약함',
+    issue: 'No. 05',
+    editorialNote: '계절의 색이 선명한 풍경과 전망 좋은 동선을 먼저 떠올려요.',
+    routeHint: '전망 포인트 · 계절 식당 · 숲길',
   },
   {
     cityPair: '도쿄 · 서울',
@@ -54,6 +72,9 @@ const preferences: Preference[] = [
     tag: '예술',
     signals: ['예술 +2', '전시 +1', '쇼핑 +1', '트렌드 +1'],
     weakSignal: '한적한 자연 - 약함',
+    issue: 'No. 06',
+    editorialNote: '전시와 편집숍, 새로운 동네의 감각을 촘촘히 따라가요.',
+    routeHint: '전시 공간 · 편집숍 · 밤 산책',
   },
 ]
 
@@ -110,99 +131,171 @@ function App() {
         <section
           id="onboarding"
           aria-labelledby="onboarding-title"
-          className="mx-auto grid min-h-dvh max-w-[1440px] grid-cols-[minmax(0,1fr)_360px] items-start gap-14 px-14 py-10 max-lg:grid-cols-1 max-lg:px-8 max-sm:px-5"
+          className="mx-auto min-h-dvh max-w-[1440px] px-12 py-9 max-lg:px-8 max-sm:px-5"
         >
-          <div className="max-w-[860px]">
-            <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-cover" />
-            <p className="mt-10 text-lg font-semibold text-[#617566]">처음 진입 전 온보딩</p>
-            <h1
-              id="onboarding-title"
-              className="mt-3 text-[48px] font-bold leading-[58px] text-[#0b3b2e] max-sm:text-[36px] max-sm:leading-[44px]"
-            >
-              대도시 예시로 여행 취향을 가볍게 고르기
-            </h1>
-            <p className="mt-4 max-w-[720px] text-base leading-7 text-[#0b3b2e]">
-              메인 화면에 들어가기 전에 익숙한 도시 감각을 하나만 선택해 주세요. Lovv는 이 선택을
-              소도시 추천과 AI 일정 대화의 첫 기준으로 사용합니다.
-            </p>
+          <div className="grid min-h-[calc(100dvh-72px)] grid-cols-[minmax(0,1fr)_420px] gap-10 max-xl:grid-cols-1">
+            <div>
+              <div className="flex items-center justify-between gap-4">
+                <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-cover" />
+                <span className="inline-flex h-9 items-center rounded-full border border-[#d7d3a2] bg-[#fffffa] px-4 text-[12px] font-bold text-[#617566]">
+                  First Issue
+                </span>
+              </div>
 
-            <section className="mt-8 rounded-[22px] border border-[#d7d3a2] bg-[#fffffa] p-6 shadow-[0_18px_50px_-28px_rgba(16,57,45,0.35)] max-sm:p-5">
-              <h2 className="text-[26px] font-bold leading-8 text-[#0b3b2e] max-sm:text-2xl">
-                어떤 여행 감각에 더 가까우세요?
-              </h2>
+              <div className="mt-10 grid grid-cols-[minmax(0,1fr)_260px] items-end gap-8 max-lg:grid-cols-1">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#617566]">
+                    Lovv City Mood Journal
+                  </p>
+                  <h1
+                    id="onboarding-title"
+                    className="mt-4 max-w-[820px] text-[56px] font-bold leading-[64px] text-[#0b3b2e] max-sm:text-[38px] max-sm:leading-[46px]"
+                  >
+                    이번 여행의 첫 분위기를 골라주세요
+                  </h1>
+                  <p className="mt-5 max-w-[680px] text-base leading-7 text-[#0b3b2e]">
+                    도시 이름을 고르는 게 아니라, 여행의 속도와 장면을 먼저 고르는 단계예요. 익숙한
+                    대도시 감각을 Lovv가 한국과 일본 소도시 후보로 바꿔둘게요.
+                  </p>
+                </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 max-md:grid-cols-1">
-                {preferences.map((preference) => {
-                  const isSelected = selectedPreference.cityPair === preference.cityPair
-
-                  return (
-                    <button
-                      key={preference.cityPair}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => setSelectedPreference(preference)}
-                      className={`grid min-h-[84px] grid-cols-[1fr_auto] items-center gap-4 rounded-[14px] border border-[#bed0b1] px-5 text-left transition hover:border-[#b8c9aa] hover:bg-[#e7f0df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] ${
-                        isSelected ? 'bg-[#e7f0df]' : 'bg-[#fffced]'
-                      }`}
-                    >
-                      <span>
-                        <span className="block text-lg font-bold leading-7 text-[#0b3b2e]">
-                          {preference.cityPair}
-                        </span>
-                        <span className="mt-1 block text-sm leading-5 text-[#617566]">
-                          {preference.description}
-                        </span>
+                <div className="rounded-[22px] border border-[#d7d3a2] bg-[#fffffa] p-5 shadow-[0_18px_50px_-32px_rgba(16,57,45,0.28)]">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
+                    Before the map
+                  </p>
+                  <p className="mt-3 text-[15px] font-bold leading-6 text-[#0b3b2e]">
+                    이번 선택으로 AI 일정의 말투와 지도 후보가 먼저 정리됩니다
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-[#0b3b2e]">
+                    {['취향', '도시', '동선'].map((step) => (
+                      <span key={step} className="rounded-full border border-[#bed0b1] bg-[#f0f6e9] px-3 py-2">
+                        {step}
                       </span>
-                      <span
-                        className={`inline-flex h-[34px] min-w-[74px] items-center justify-center rounded-full border px-4 text-[13px] font-semibold text-[#0b3b2e] ${
-                          isSelected ? 'border-[#d7d3a2] bg-[#ffe25a]' : 'border-[#bed0b1] bg-[#f0f6e9]'
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <section className="mt-9">
+                <div className="flex items-end justify-between gap-5 max-md:block">
+                  <div>
+                    <p className="text-sm font-semibold text-[#617566]">Choose your cover story</p>
+                    <h2 className="mt-2 text-[28px] font-bold leading-9 text-[#0b3b2e]">
+                      도시의 분위기로 고르는 여행 취향
+                    </h2>
+                  </div>
+                  <p className="max-w-[320px] text-sm leading-6 text-[#617566] max-md:mt-3">
+                    마음에 가까운 장면을 고르면, 다음 화면의 챗봇과 지도 추천이 이 톤에서 시작됩니다.
+                  </p>
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+                  {preferences.map((preference) => {
+                    const isSelected = selectedPreference.cityPair === preference.cityPair
+
+                    return (
+                      <button
+                        key={preference.cityPair}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedPreference(preference)}
+                        className={`flex min-h-[176px] flex-col justify-between rounded-[22px] border p-5 text-left transition hover:-translate-y-0.5 hover:border-[#10392d] hover:bg-[#f0f6e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] ${
+                          isSelected
+                            ? 'border-[#10392d] bg-[#e7f0df] shadow-[0_18px_40px_-28px_rgba(16,57,45,0.55)]'
+                            : 'border-[#d7d3a2] bg-[#fffffa]'
                         }`}
                       >
-                        {preference.tag}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="mt-6 grid grid-cols-[1fr_auto] items-center gap-5 max-md:grid-cols-1">
-                <div className="flex flex-wrap gap-2">
-                  {[...selectedPreference.signals.slice(0, 3), selectedPreference.weakSignal].map((signal, index) => (
-                    <span
-                      key={signal}
-                      className={`inline-flex h-[32px] items-center justify-center rounded-full border px-4 text-[12px] font-semibold text-[#0b3b2e] ${
-                        index < 2 ? 'border-[#d7d3a2] bg-[#ffe25a]' : 'border-[#bed0b1] bg-[#f0f6e9]'
-                      }`}
-                    >
-                      {signal}
-                    </span>
-                  ))}
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#617566]">
+                            {preference.issue}
+                          </span>
+                          <span
+                            className={`inline-flex h-[30px] items-center rounded-full border px-3 text-[12px] font-bold text-[#0b3b2e] ${
+                              isSelected ? 'border-[#d7d3a2] bg-[#ffe25a]' : 'border-[#bed0b1] bg-[#f0f6e9]'
+                            }`}
+                          >
+                            {preference.tag}
+                          </span>
+                        </span>
+                        <span className="mt-5">
+                          <span className="block text-[23px] font-bold leading-8 text-[#0b3b2e]">
+                            {preference.cityPair}
+                          </span>
+                          <span className="mt-2 block text-sm leading-6 text-[#617566]">
+                            {preference.description}
+                          </span>
+                        </span>
+                        <span className="mt-5 block border-t border-[#d7d3a2] pt-3 text-[12px] font-semibold leading-5 text-[#0b3b2e]">
+                          {preference.routeHint}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={enterMainWithPreference}
-                  className="inline-flex h-[48px] w-[220px] items-center justify-center rounded-full border border-[#d7d3a2] bg-[#ffe25a] text-sm font-semibold text-[#0b3b2e] shadow-[0_2px_3px_rgba(0,0,0,0.04)] transition hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] max-md:w-full"
-                >
-                  이 취향으로 Lovv 시작하기
-                </button>
-              </div>
-            </section>
-          </div>
 
-          <aside className="mt-[364px] justify-self-end rounded-[24px] border border-[#d7d3a2] bg-[#fffffa] p-6 shadow-[0_18px_50px_-28px_rgba(16,57,45,0.35)] max-lg:mt-0 max-lg:justify-self-start max-sm:w-full">
-            <img
-              src={suitcaseImage}
-              alt="손을 흔드는 초록색 캐리어 캐릭터"
-              className="mx-auto h-[340px] w-[240px] rounded-[18px] object-cover"
-            />
-            <p className="mt-5 text-sm font-semibold text-[#617566]">선택한 감각</p>
-            <h2 className="mt-2 text-[28px] font-bold leading-8 text-[#0b3b2e]">
-              {selectedPreference.cityPair}
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-[#0b3b2e]">
-              로그인 없이 MVP를 운영하므로 전체 채팅 로그가 아니라 여행 취향 힌트만 먼저 저장합니다.
-            </p>
-          </aside>
+                <div className="mt-6 grid grid-cols-[1fr_auto] items-center gap-5 rounded-[22px] border border-[#d7d3a2] bg-[#fffffa] px-5 py-4 shadow-[0_18px_50px_-34px_rgba(16,57,45,0.24)] max-md:grid-cols-1">
+                  <div className="flex flex-wrap gap-2">
+                    {[...selectedPreference.signals.slice(0, 3), selectedPreference.weakSignal].map(
+                      (signal, index) => (
+                        <span
+                          key={signal}
+                          className={`inline-flex h-[32px] items-center justify-center rounded-full border px-4 text-[12px] font-semibold text-[#0b3b2e] ${
+                            index < 2 ? 'border-[#d7d3a2] bg-[#ffe25a]' : 'border-[#bed0b1] bg-[#f0f6e9]'
+                          }`}
+                        >
+                          {signal}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={enterMainWithPreference}
+                    className="inline-flex h-[48px] w-[220px] items-center justify-center rounded-full border border-[#d7d3a2] bg-[#ffe25a] text-sm font-semibold text-[#0b3b2e] shadow-[0_2px_3px_rgba(0,0,0,0.04)] transition hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] max-md:w-full"
+                  >
+                    이 취향으로 Lovv 시작하기
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <aside className="sticky top-9 h-fit rounded-[28px] border border-[#d7d3a2] bg-[#fffffa] p-5 shadow-[0_24px_70px_-42px_rgba(16,57,45,0.45)] max-xl:static">
+              <div className="relative overflow-hidden rounded-[24px] border border-[#e0d6a8] bg-[#f0f6e9] px-6 pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#617566]">
+                    Selected Cover
+                  </span>
+                  <span className="rounded-full border border-[#d7d3a2] bg-[#ffe25a] px-3 py-1 text-[12px] font-bold text-[#0b3b2e]">
+                    {selectedPreference.tag}
+                  </span>
+                </div>
+                <img
+                  src={suitcaseImage}
+                  alt="손을 흔드는 초록색 캐리어 캐릭터"
+                  className="mx-auto mt-4 h-[310px] w-[230px] rounded-t-[24px] object-cover"
+                />
+              </div>
+
+              <div className="px-2 pb-2 pt-5">
+                <p className="text-sm font-semibold text-[#617566]">오늘의 취향 여정</p>
+                <h2 className="mt-2 text-[34px] font-bold leading-10 text-[#0b3b2e]">
+                  {selectedPreference.cityPair}
+                </h2>
+                <p className="mt-4 text-sm leading-6 text-[#0b3b2e]">{selectedPreference.editorialNote}</p>
+
+                <div className="mt-5 rounded-[18px] border border-[#bed0b1] bg-[#fffced] p-4">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
+                    First route note
+                  </p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-[#0b3b2e]">{selectedPreference.routeHint}</p>
+                </div>
+
+                <p className="mt-5 text-[13px] leading-6 text-[#617566]">
+                  로그인 없이 MVP를 운영하므로 전체 채팅 로그가 아니라 여행 취향 힌트만 먼저 저장합니다.
+                </p>
+              </div>
+            </aside>
+          </div>
         </section>
       ) : (
         <>

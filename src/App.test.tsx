@@ -37,16 +37,16 @@ describe('MVP main entry screen', () => {
 
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { name: '대도시 예시로 여행 취향을 가볍게 고르기' }),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Lovv City Mood Journal')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '이번 여행의 첫 분위기를 골라주세요' })).toBeInTheDocument()
+    expect(screen.getByText('이번 선택으로 AI 일정의 말투와 지도 후보가 먼저 정리됩니다')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /후쿠오카 · 부산/ }))
     fireEvent.click(screen.getByRole('button', { name: '이 취향으로 Lovv 시작하기' }))
 
     expect(localStorage.getItem('lovv.preference')).toContain('후쿠오카 · 부산')
     expect(
-      screen.queryByRole('heading', { name: '대도시 예시로 여행 취향을 가볍게 고르기' }),
+      screen.queryByRole('heading', { name: '이번 여행의 첫 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('banner')).toBeInTheDocument()
     expect(screen.getByText('후쿠오카 · 부산 감성으로 시작합니다')).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe('MVP main entry screen', () => {
     render(<App />)
 
     expect(
-      screen.queryByRole('heading', { name: '대도시 예시로 여행 취향을 가볍게 고르기' }),
+      screen.queryByRole('heading', { name: '이번 여행의 첫 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
     expect(screen.getByText('오키나와 · 제주 감성으로 시작합니다')).toBeInTheDocument()
 
@@ -67,7 +67,7 @@ describe('MVP main entry screen', () => {
     expect(screen.getByRole('region', { name: '여행 지도' })).toBeInTheDocument()
     expect(screen.getByText('오키나와 · 제주 기반 지도')).toBeInTheDocument()
     expect(
-      screen.queryByRole('heading', { name: '대도시 예시로 여행 취향을 가볍게 고르기' }),
+      screen.queryByRole('heading', { name: '이번 여행의 첫 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
   })
 })
