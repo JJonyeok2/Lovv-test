@@ -1,8 +1,67 @@
+import { useState } from 'react'
 import logoImage from './assets/lovv-logo.png'
-import suitcaseImage from './assets/lovv-suitcase.png'
+import suitcaseImage from './assets/lovv-suitcase-hi.png'
+
+type Preference = {
+  cityPair: string
+  description: string
+  tag: string
+  signals: string[]
+  weakSignal: string
+}
+
+const preferences: Preference[] = [
+  {
+    cityPair: '교토 · 경주',
+    description: '역사, 전통문화, 산책',
+    tag: '역사',
+    signals: ['역사 +2', '산책 +1', '혼잡 회피 +1', '로컬 미식 +1'],
+    weakSignal: '사진 명소 - 약함',
+  },
+  {
+    cityPair: '후쿠오카 · 부산',
+    description: '미식, 로컬 시장, 축제',
+    tag: '미식',
+    signals: ['미식 +2', '시장 +1', '축제 +1', '로컬 미식 +1'],
+    weakSignal: '조용한 산책 - 약함',
+  },
+  {
+    cityPair: '오키나와 · 제주',
+    description: '바다, 자연, 휴식',
+    tag: '바다',
+    signals: ['바다 +2', '휴식 +1', '자연 +1', '카페 산책 +1'],
+    weakSignal: '도심 쇼핑 - 약함',
+  },
+  {
+    cityPair: '벳푸 · 온양',
+    description: '온천, 힐링, 여유',
+    tag: '온천',
+    signals: ['온천 +2', '힐링 +1', '느린 일정 +1', '숙소 체류 +1'],
+    weakSignal: '야간 축제 - 약함',
+  },
+  {
+    cityPair: '삿포로 · 강원',
+    description: '자연, 계절감, 겨울',
+    tag: '자연',
+    signals: ['자연 +2', '계절감 +1', '전망 +1', '로컬 음식 +1'],
+    weakSignal: '혼잡 도심 - 약함',
+  },
+  {
+    cityPair: '도쿄 · 서울',
+    description: '전시, 쇼핑, 예술, 트렌드',
+    tag: '예술',
+    signals: ['예술 +2', '전시 +1', '쇼핑 +1', '트렌드 +1'],
+    weakSignal: '한적한 자연 - 약함',
+  },
+]
 
 function App() {
-  const proofItems = ['AI 일정', '챗봇', '소도시 데이터']
+  const proofItems = ['AI 일정', '챗봇', '소도시 보기']
+  const [selectedPreference, setSelectedPreference] = useState(preferences[0])
+
+  const storeSelectedPreference = () => {
+    localStorage.setItem('lovv.preference', JSON.stringify(selectedPreference))
+  }
 
   return (
     <main className="min-h-dvh bg-[#fffcd9] text-[#10392d]">
@@ -27,7 +86,7 @@ function App() {
       >
         <div className="max-w-[620px]">
           <p className="text-base font-semibold leading-[22px] text-[#577861]">
-            한국과 일본 소도시를 가장 쉽게 시작하는 방법
+            한국과 일본 소도시 여행을 가장 쉽게 시작하는 방법
           </p>
           <h1
             id="main-entry-title"
@@ -82,6 +141,108 @@ function App() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section
+        id="onboarding"
+        aria-labelledby="onboarding-title"
+        className="mx-auto min-h-[900px] max-w-[1440px] px-16 pb-24 pt-24 max-lg:px-8 max-sm:px-5"
+      >
+        <p className="text-lg font-semibold text-[#617566]">접속 시 최초 온보딩 설문</p>
+        <h2
+          id="onboarding-title"
+          className="mt-4 text-4xl font-bold leading-[46px] text-[#0b3b2e] max-sm:text-[30px] max-sm:leading-10"
+        >
+          대도시 예시로 여행 취향을 가볍게 고르기
+        </h2>
+        <p className="mt-4 max-w-[860px] text-lg leading-7 text-[#0b3b2e]">
+          처음부터 테마를 확정하지 않고, 익숙한 도시의 느낌을 선택하면 Lovv가 소도시 추천 태그로
+          변환합니다.
+        </p>
+
+        <div className="mt-5 grid grid-cols-[minmax(0,842px)_430px] gap-10 max-xl:grid-cols-1">
+          <section className="rounded-[18px] border border-[#d7d3a2] bg-[#fffffa] p-8 shadow-[0_8px_9px_rgba(0,0,0,0.08)]">
+            <h3 className="text-[32px] font-bold leading-10 text-[#0b3b2e] max-sm:text-2xl">
+              어떤 여행 감각에 더 가까우세요?
+            </h3>
+
+            <div className="mt-7 grid grid-cols-2 gap-x-6 gap-y-8 max-md:grid-cols-1">
+              {preferences.map((preference) => {
+                const isSelected = selectedPreference.cityPair === preference.cityPair
+
+                return (
+                  <button
+                    key={preference.cityPair}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedPreference(preference)}
+                    className={`grid min-h-24 grid-cols-[1fr_auto] items-center gap-4 rounded-[14px] border border-[#bed0b1] px-5 text-left transition hover:border-[#b8c9aa] hover:bg-[#e7f0df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] ${
+                      isSelected ? 'bg-[#e7f0df]' : 'bg-[#fffced]'
+                    }`}
+                  >
+                    <span>
+                      <span className="block text-[22px] font-bold leading-7 text-[#0b3b2e]">
+                        {preference.cityPair}
+                      </span>
+                      <span className="mt-2 block text-base leading-6 text-[#617566]">
+                        {preference.description}
+                      </span>
+                    </span>
+                    <span
+                      className={`inline-flex h-[34px] min-w-[74px] items-center justify-center rounded-full border px-4 text-[13px] font-semibold text-[#0b3b2e] ${
+                        isSelected
+                          ? 'border-[#d7d3a2] bg-[#ffe25a]'
+                          : 'border-[#bed0b1] bg-[#f0f6e9]'
+                      }`}
+                    >
+                      {preference.tag}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <a
+                href="#chat"
+                onClick={storeSelectedPreference}
+                className="inline-flex h-[46px] w-[230px] items-center justify-center rounded-full border border-[#d7d3a2] bg-[#ffe25a] text-sm font-semibold text-[#0b3b2e] shadow-[0_2px_3px_rgba(0,0,0,0.04)] transition hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e]"
+              >
+                이 느낌으로 대화 시작
+              </a>
+            </div>
+          </section>
+
+          <aside className="rounded-[18px] border border-[#d7d3a2] bg-[#fffffa] p-8 shadow-[0_8px_9px_rgba(0,0,0,0.08)]">
+            <p className="text-lg font-semibold text-[#617566]">Lovv가 저장하는 개인화 단서</p>
+            <h3 className="mt-4 text-[30px] font-bold leading-[38px] text-[#0b3b2e]">
+              <span className="block">대화 전에는</span>
+              <span className="block">취향 힌트만 저장합니다</span>
+            </h3>
+            <p className="mt-7 text-[15px] leading-[23px] text-[#0b3b2e]">
+              로그인 없이 MVP를 운영하므로 전체 대화 기록은 저장하지 않고, 선택한 감각과 생성된
+              계획만 localStorage에 남깁니다.
+            </p>
+
+            <div className="mt-9 grid grid-cols-2 gap-3">
+              {[...selectedPreference.signals, selectedPreference.weakSignal].map((signal, index) => (
+                <span
+                  key={signal}
+                  className={`inline-flex h-[34px] items-center justify-center rounded-full border px-4 text-[13px] font-semibold text-[#0b3b2e] ${
+                    index < 2 ? 'border-[#d7d3a2] bg-[#ffe25a]' : 'border-[#bed0b1] bg-[#f0f6e9]'
+                  }`}
+                >
+                  {signal}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-9 rounded-[14px] border border-[#bed0b1] bg-[#f0f6e9] px-5 py-5 text-sm font-semibold leading-[22px] text-[#0b3b2e]">
+              <p>저장 대상: 생성된 여행 계획, 관심 지역, 비교/저장 액션</p>
+              <p>저장 제외: 전체 채팅 로그</p>
+            </div>
+          </aside>
         </div>
       </section>
     </main>

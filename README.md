@@ -5,10 +5,10 @@ React + TypeScript + Tailwind CSS implementation of the Lovv MVP UI from Figma.
 ## Current Scope
 
 - `MVP Refined 01 / Lovv Main Entry`
+- `MVP Refined 02 / Onboarding Preference`
 
 Upcoming MVP frames:
 
-- `MVP Refined 02 / Onboarding Preference`
 - `MVP Refined 03 / Lovv Chat Planning`
 - `MVP Refined 04 / Style Input + Result`
 - `MVP Refined 05 / Lovv Geo Planning`
