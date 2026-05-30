@@ -13,7 +13,7 @@ function App() {
           </a>
           <a
             href="#onboarding"
-            className="inline-flex h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#c7d4b2] bg-[#e8f0e2] text-[10.5px] font-bold text-[#10251f] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
+            className="inline-flex h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#b8c9aa] bg-[#dbe8d3] text-[10.5px] font-bold text-[#10251f] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
           >
             새 여정 만들기
           </a>
@@ -43,7 +43,7 @@ function App() {
           </p>
           <a
             href="#onboarding"
-            className="mt-7 inline-flex h-[52px] w-[178px] items-center justify-center rounded-[18px] border border-[#c7d4b2] bg-[#e8f0e2] text-sm font-semibold text-[#10392d] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
+            className="mt-7 inline-flex h-[52px] w-[178px] items-center justify-center rounded-[18px] border border-[#b8c9aa] bg-[#dbe8d3] text-sm font-semibold text-[#10392d] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
           >
             AI 일정 짜기
           </a>
@@ -73,7 +73,7 @@ function App() {
               <li key={item}>
                 <a
                   href={item === '챗봇' ? '#chat' : '#onboarding'}
-                  className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#c7d4b2] bg-[#e8f0e2] px-8 text-xs text-[#10392d] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] ${
+                  className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#b8c9aa] bg-[#dbe8d3] px-8 text-xs text-[#10392d] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] ${
                     index === 0 ? 'font-semibold' : 'font-medium'
                   }`}
                 >
