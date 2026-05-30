@@ -1,17 +1,17 @@
-# TASK3 Chat Map Workspace Spec
+# TASK3 Chat Planner Detail Spec
 
 ## Summary
 
-메인 화면에서 `AI 일정 짜기`를 누른 뒤 진입하는 여행 생성 화면을 MVP 수준의 실제 작업 공간으로 만든다. 화면은 Figma 방향과 사용자가 확정한 흐름에 맞춰 챗봇과 하단 지도를 중심으로 구성한다. 사용자는 온보딩에서 고른 여행 취향을 기반으로 대화 입력을 시작하고, Lovv는 대화 내용에 맞는 소도시 후보, 일정 초안, 지도 동선을 같은 화면에서 보여준다.
+메인 화면에서 `AI 일정 짜기`를 누른 뒤 진입하는 여행 생성 화면을 MVP 수준의 실제 작업 공간으로 만든다. 최신 방향은 지도 없이 챗봇을 중심에 두고, 생성된 일정의 세부 내용은 Triple의 맞춤 일정 결과처럼 챗봇 창 아래에 이어서 붙는 구조다. 사용자는 온보딩에서 고른 여행 취향을 기반으로 대화 입력을 시작하고, Lovv는 대화 내용에 맞는 소도시 후보와 일정 초안을 같은 화면에서 정리한다.
 
-이 Spec은 README의 다음 MVP 프레임인 `MVP Refined 03 / Lovv Chat Planning`, `MVP Refined 04 / Style Input + Result`, `MVP Refined 05 / Lovv Geo Planning`을 하나의 사용자 흐름으로 묶는다.
+이 Spec은 README의 다음 MVP 프레임인 `MVP Refined 03 / Lovv Chat Planning`, `MVP Refined 04 / Style Input + Result`를 우선 범위로 묶는다. `MVP Refined 05 / Lovv Geo Planning`은 지도 방향이 다시 확정될 때 별도 Task로 다룬다.
 
 ## Goals
 
-- 챗봇과 하단 지도만으로 여행 생성 작업을 진행하는 웹앱 화면을 구현한다.
-- 온보딩에서 저장한 `lovv.preference`를 챗봇 시작 메시지, 추천 톤, 지도 후보에 반영한다.
+- 챗봇과 챗봇 아래 일정 상세 영역으로 여행 생성 작업을 진행하는 웹앱 화면을 구현한다.
+- 온보딩에서 저장한 `lovv.preference`를 챗봇 시작 메시지, 추천 톤, 일정 상세 초안에 반영한다.
 - 사용자가 여행 조건을 입력하면 대화 메시지와 일정 초안 UI가 화면 안에서 이어진다.
-- 하단 지도는 장식이 아니라 현재 추천 후보와 일정 동선을 보여주는 신뢰 장치로 동작한다.
+- 생성된 일정 상세는 챗봇 창 아래에서 결과 페이지처럼 시간대별 세부 내용으로 보인다.
 - 현재 Lovv 컬러, 캐릭터, 부드러운 초록/노랑 버튼 톤을 유지하되, 단순한 placeholder 느낌을 줄인다.
 - MVP에서는 백엔드 없이 프론트엔드 상태와 `localStorage`만 사용한다.
 
@@ -19,6 +19,7 @@
 
 - 실제 AI API 연동은 포함하지 않는다.
 - 실제 지도 API, 지오코딩, 경로 계산, 실시간 장소 검색은 포함하지 않는다.
+- 지도 UI는 이번 Task에 포함하지 않는다.
 - 로그인, 계정 저장, 서버 동기화, 전체 채팅 로그 저장은 포함하지 않는다.
 - 추천 알고리즘의 정확도 개선이나 실제 여행 데이터 수집은 포함하지 않는다.
 - Figma의 모든 픽셀 값을 1:1로 복제하지 않는다. React/Tailwind 구현에 맞게 적응한다.
@@ -27,30 +28,30 @@
 
 - 한국과 일본 소도시 여행을 빠르게 시작하고 싶은 일반 사용자.
 - 여행 조건을 길게 정리하기보다 대화로 일정 초안을 만들고 싶은 사용자.
-- 추천 결과를 말로만 받기보다 지도 위치와 동선으로 함께 확인하고 싶은 사용자.
+- 추천 결과를 말로만 받기보다 시간대별 세부 일정으로 바로 확인하고 싶은 사용자.
 
 ## User Flow
 
 1. 사용자는 첫 진입 온보딩에서 여행 취향을 선택한다.
 2. 사용자는 메인 화면에서 `AI 일정 짜기`를 클릭한다.
-3. 시스템은 온보딩을 다시 띄우지 않고 챗봇 + 하단 지도 워크스페이스로 이동한다.
+3. 시스템은 온보딩을 다시 띄우지 않고 챗봇 워크스페이스로 이동한다.
 4. 챗봇 첫 메시지는 저장된 취향을 반영해 여행 조건 입력을 요청한다.
 5. 사용자는 여행 기간, 동행, 걷는 정도, 관심사를 입력하거나 추천 칩을 선택한다.
 6. 시스템은 사용자 메시지를 대화 목록에 추가하고, MVP용 deterministic 응답으로 일정 초안을 보여준다.
-7. 하단 지도는 선택 취향과 일정 초안에 맞는 후보 지점, 동선, 상태 칩을 함께 갱신한다.
-8. 사용자는 같은 화면에서 대화, 일정 초안, 지도 동선을 비교하며 다음 입력을 이어갈 수 있다.
+7. 챗봇 창 아래의 일정 상세 영역은 선택 취향과 일정 초안에 맞는 시간대별 세부 내용을 보여준다.
+8. 사용자는 같은 화면에서 대화와 일정 상세를 비교하며 다음 입력을 이어갈 수 있다.
 
 ## Requirements
 
 ### R1. Chat workspace entry
 
-- WHEN a returning or newly onboarded user clicks `AI 일정 짜기`, THE system SHALL show the chat map workspace directly.
-- WHEN the chat map workspace is shown, THE system SHALL NOT show the onboarding gate or onboarding modal.
+- WHEN a returning or newly onboarded user clicks `AI 일정 짜기`, THE system SHALL show the chat workspace directly.
+- WHEN the chat workspace is shown, THE system SHALL NOT show the onboarding gate or onboarding modal.
 - WHEN no stored preference exists because storage was cleared or invalid, THE system SHALL fall back to the onboarding gate before the main or chat screen.
 
 ### R2. Preference-aware chat start
 
-- WHEN the chat map workspace loads, THE system SHALL read the selected preference from the existing app state.
+- WHEN the chat workspace loads, THE system SHALL read the selected preference from the existing app state.
 - THE system SHALL show an assistant opening message that includes the selected city pair or its theme signals.
 - THE system SHALL show progress/status items that indicate preference reflection, candidate exploration, and route planning.
 
@@ -69,13 +70,14 @@
 - THE schedule draft SHALL include a compact summary of recommended city direction, travel mood, and next question.
 - THE schedule draft SHALL remain readable on desktop and mobile.
 
-### R5. Bottom map behavior
+### R5. Generated schedule detail behavior
 
-- WHEN the chat map workspace loads, THE bottom map SHALL be visible without scrolling excessively on common desktop viewport heights.
-- THE map section SHALL expose an accessible region label such as `여행 지도`.
-- THE map SHALL show at least four labeled candidate points or stops.
-- WHEN a schedule draft is generated, THE map SHALL reflect the generated stops with highlighted pins or route segments.
-- THE map SHALL be implemented as a static visual MVP, not an external map provider.
+- WHEN the chat workspace loads, THE generated schedule detail section SHALL appear below the unchanged chat panel.
+- THE schedule detail section SHALL expose an accessible region label such as `생성된 일정 상세`.
+- THE schedule detail section SHALL include a preference-aware one-day draft title.
+- THE schedule detail section SHALL show at least three time blocks: morning, afternoon, and evening.
+- THE schedule detail section SHALL present a result-page style timeline with movement hints and recommendation reasons.
+- THE chat workspace SHALL NOT render the `여행 지도` region in this Task.
 
 ### R6. Persistence and privacy
 
@@ -87,25 +89,26 @@
 ### R7. Responsiveness and accessibility
 
 - THE layout SHALL be desktop-first webapp UI with a useful mobile fallback.
-- ON desktop, THE layout SHALL keep the left planner rail, chat area, and bottom map visually organized.
+- ON desktop, THE layout SHALL keep the left planner rail, chat area, and generated schedule detail area visually organized.
 - ON mobile, THE layout SHALL stack sections without text overlap or horizontal scrolling.
 - Interactive controls SHALL have accessible labels or visible text.
-- Text inside buttons, cards, status chips, and map labels SHALL not overflow its container.
+- Text inside buttons, cards, status chips, and schedule detail blocks SHALL not overflow its container.
 
 ## Acceptance Criteria
 
 - First-time users still start at the pre-main onboarding gate.
-- Returning users can enter the main screen and open the chat map workspace without seeing onboarding again.
+- Returning users can enter the main screen and open the chat workspace without seeing onboarding again.
 - Chat workspace contains:
   - `AI 일정 챗봇` heading.
   - Preference-aware assistant opening message.
   - Message input.
   - Send action.
-  - Bottom `여행 지도` region.
-  - Static route or pin visualization.
+  - `생성된 일정 상세` region below the chat panel.
+  - Morning, afternoon, and evening detail blocks.
+  - Result-style timeline items with movement hints and recommendation reasons.
 - Submitting a non-empty message adds the user message and a deterministic assistant response.
 - After first submit, a schedule draft with at least three itinerary blocks is visible.
-- Bottom map updates or highlights generated stops after submit.
+- The chat workspace does not render a `여행 지도` region.
 - No full chat transcript is written to `localStorage`.
 - `npm test`, `npm run lint`, and `npm run build` pass.
 - Browser verification confirms desktop and mobile layouts do not show incoherent overlap.
@@ -128,18 +131,18 @@ The current app keeps all UI in `src/App.tsx` with three views:
 
 - `onboarding`: first-entry preference gate.
 - `home`: personalized main screen.
-- `chat`: current placeholder chat + bottom map screen.
+- `chat`: current placeholder chat screen with generated schedule detail below the chat panel.
 
-Preferences are held in a local `preferences` array and persisted as `lovv.preference` with only `cityPair`. Tests live in `src/App.test.tsx` and already cover onboarding, returning-user behavior, chat entry, and bottom map presence.
+Preferences are held in a local `preferences` array and persisted as `lovv.preference` with only `cityPair`. Tests live in `src/App.test.tsx` and already cover onboarding, returning-user behavior, chat entry, map absence, and generated schedule detail presence.
 
 ### Chosen Approach
 
-Implement the next MVP as a richer local-state chat map workspace. The chat flow will remain deterministic and front-end only. This keeps the MVP credible visually while avoiding backend/API complexity before product flow is stable.
+Implement the next MVP as a richer local-state chat and itinerary-detail workspace. The chat flow will remain deterministic and front-end only. This keeps the MVP credible visually while avoiding backend/API complexity before product flow is stable.
 
 The preferred implementation direction is to split `src/App.tsx` only where it reduces real complexity:
 
 - Move preference data and helper lookup into a small data/helper module.
-- Extract `ChatPlannerView` when adding message state, draft state, and map state.
+- Extract `ChatPlannerView` when adding message state and draft state.
 - Keep `HomeView` and `OnboardingGate` extraction optional unless `App.tsx` becomes difficult to review.
 
 ### UI Structure
@@ -148,14 +151,14 @@ Desktop layout:
 
 - Fixed top header retained from current app.
 - Left rail: Lovv AI Planner, selected preference, progress states, current trip assumptions.
-- Main chat panel: message list, assistant/user bubbles, schedule draft result, input row.
-- Bottom map panel: map preview, route line, pins/stops, selected draft summary chips.
+- Main chat panel: message list, assistant/user bubbles, input row. The chat panel's existing visual height and structure should remain stable.
+- Generated detail panel below chat: one-day draft summary, result-style timeline, time blocks, movement hints, recommendation reasons, selected preference signals.
 
 Mobile layout:
 
 - Header.
 - Chat panel first.
-- Planner status and map stacked below or above depending on readability.
+- Planner status and generated detail stacked below or above depending on readability.
 - Input remains full-width and does not overlap content.
 
 ### State Model
@@ -200,16 +203,16 @@ Only the selected preference and optional final lightweight plan draft may be st
 ## Risks And Assumptions
 
 - Figma metadata inspection timed out during Spec drafting, so exact node names and pixel-level dimensions are not confirmed in this document.
-- The Spec assumes the next useful product step is the chat + map workspace, based on README and prior user direction.
-- Static map visuals can feel less trustworthy if too abstract; the UI should use clear labels, route stages, and candidate chips to compensate.
+- The Spec assumes the next useful product step is the chat + generated itinerary detail workspace, based on the latest user direction.
+- Map UI is intentionally deferred. If map returns later, it should be treated as a separate Task rather than mixed into the chat-detail task.
 - `src/App.tsx` is already large. Adding chat behavior without extraction will increase review risk.
 
 ## Task Breakdown
 
 ### Task 3.1: Prepare chat workspace data model
 
-- Purpose: 챗봇 메시지, 일정 초안, 지도 핀을 표현할 최소 타입과 deterministic 데이터를 준비한다.
-- Scope: preference helper, chat message model, plan draft model, static draft generator.
+- Purpose: 챗봇 메시지와 일정 상세 초안을 표현할 최소 타입과 deterministic 데이터를 준비한다.
+- Scope: preference helper, chat message model, plan draft model, static detail generator.
 - Dependencies: Current onboarding and main flow.
 - Context Budget:
   - Must read: `src/App.tsx`, `src/App.test.tsx`, this Spec.
@@ -242,16 +245,16 @@ Only the selected preference and optional final lightweight plan draft may be st
 - Acceptance Criteria: first submit 후 최소 3개 itinerary block이 보이고 모바일에서도 텍스트가 겹치지 않는다.
 - Verification: `npm test`, `npm run lint`, browser desktop/mobile check.
 
-### Task 3.4: Upgrade bottom map to generated route preview
+### Task 3.4: Render generated schedule detail below chat
 
-- Purpose: 지도 영역이 단순 장식이 아니라 현재 일정 초안을 반영하는 신뢰 장치가 되게 한다.
-- Scope: static map pins, route segment, generated stops, highlight state.
+- Purpose: 챗봇에서 나온 일정 초안이 대화 아래에서 결과 페이지형 세부 내용으로 이어지게 한다.
+- Scope: generated schedule detail region, one-day draft title, result timeline, morning/afternoon/evening detail blocks, movement hints, recommendation reasons.
 - Dependencies: Task 3.3.
 - Context Budget:
-  - Must read: Spec `#bottom-map-behavior`, `#ui-structure`.
+  - Must read: Spec `#generated-schedule-detail-behavior`, `#ui-structure`.
   - Do not read: external map API docs.
-  - Optional read: current static map placeholder in `src/App.tsx`.
-- Acceptance Criteria: 일정 초안과 지도 stop label이 일치하고, `여행 지도` region이 유지된다.
+  - Optional read: current chat detail section in `src/App.tsx`.
+- Acceptance Criteria: 챗봇 아래에 `생성된 일정 상세` region이 있고 오전/오후/저녁 세부 블록, 이동 힌트, 추천 이유가 보인다.
 - Verification: `npm test`, browser position/overlap check.
 
 ### Task 3.5: Privacy and persistence guard
@@ -271,17 +274,17 @@ Only the selected preference and optional final lightweight plan draft may be st
 - Unit/interaction tests:
   - First-entry onboarding remains unchanged.
   - Returning user opens main directly.
-  - `AI 일정짜기` opens chat map workspace.
+  - `AI 일정짜기` opens chat workspace.
   - Empty input does not create a message.
-  - Non-empty input creates user message, assistant response, schedule draft, and map stops.
+  - Non-empty input creates user message, assistant response, and schedule draft details.
   - Full chat transcript is not persisted to `localStorage`.
 - Static checks:
   - `npm run lint`.
   - `npm run build`.
 - Browser checks:
-  - Desktop viewport: no overlapping text, chat and map both visible as a coherent webapp workspace.
+  - Desktop viewport: no overlapping text, chat and generated detail both visible as a coherent webapp workspace.
   - Mobile viewport: sections stack without horizontal overflow.
-  - Preference-specific text appears in chat and map.
+  - Preference-specific text appears in chat and generated detail.
 
 ## Approval Needed
 
