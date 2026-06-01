@@ -468,7 +468,7 @@ function App() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#fffcd9] text-[#10392d]">
+    <main className="lovv-warm-pattern min-h-dvh bg-[#fff8ee] text-[#10392d]">
       {activeView === 'auth' ? (
         <section
           aria-labelledby="auth-title"
@@ -481,19 +481,20 @@ function App() {
             </p>
             <h1
               id="auth-title"
+              aria-label="서울/오사카 말고, 지금은 이곳"
               className="mt-4 max-w-[720px] break-keep text-[58px] font-bold leading-[68px] text-[#10392d] max-sm:text-[36px] max-sm:leading-[44px]"
             >
-              회원가입하고 Lovv 시작하기
+              <span className="block">서울/오사카 말고,</span>
+              <span className="block">지금은 이곳</span>
             </h1>
-            <p className="mt-6 max-w-[620px] break-keep text-lg leading-8 text-[#10392d] max-sm:text-base max-sm:leading-7">
-              저장한 취향과 여행 일정을 마이페이지에서 다시 보기 위해 먼저 Google 간편 로그인으로
-              시작합니다.
+            <p className="mt-7 break-keep text-sm font-bold text-[#617566]">
+              회원가입하고 Lovv 시작하기
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={signInWithGoogle}
-                className="inline-flex min-h-[52px] items-center justify-center rounded-[18px] border border-[#b8c9aa] bg-[#dbe8d3] px-6 text-sm font-bold text-[#10392d] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-full"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-[18px] border border-[#c56b45] bg-[#cf744d] px-6 text-sm font-bold text-[#fffaf4] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#b95d38] hover:bg-[#de895d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-full"
               >
                 Google 간편 로그인으로 시작하기
               </button>
@@ -700,7 +701,7 @@ function App() {
               </a>
               <div className="flex min-w-0 items-center justify-end gap-2">
                 <span className="hidden min-w-0 items-center gap-2 rounded-full border border-[#d7d3a2] bg-[#fffced] px-3 py-1 text-[11px] font-bold text-[#10392d] sm:inline-flex">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#dbe8d3]">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#f3b562]">
                     {currentUser?.avatarInitial ?? 'L'}
                   </span>
                   <span className="max-w-[120px] truncate">{currentUser?.name ?? 'Lovv Tester'}</span>
@@ -708,14 +709,14 @@ function App() {
                 <a
                   href="#home"
                   onClick={goHome}
-                  className="inline-flex h-auto min-h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#b8c9aa] bg-[#dbe8d3] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-auto max-sm:px-2"
+                  className="inline-flex h-auto min-h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#c56b45] bg-[#cf744d] px-3 text-center text-[10.5px] font-bold leading-4 text-[#fffaf4] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#b95d38] hover:bg-[#de895d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-auto max-sm:px-2"
                 >
                   새 여정 만들기
                 </a>
                 <button
                   type="button"
                   onClick={signOut}
-                  className="inline-flex h-auto min-h-8 items-center justify-center rounded-[10.5px] border border-[#d7d3a2] bg-[#fffffa] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
+                  className="inline-flex h-auto min-h-8 items-center justify-center rounded-[10.5px] border border-[#d7d3a2] bg-[#fffffa] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] transition hover:border-[#b95d38] hover:bg-[#fff2df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
                 >
                   로그아웃
                 </button>
@@ -752,7 +753,7 @@ function App() {
                   <a
                     href="#chat"
                     onClick={openChat}
-                    className="mt-7 inline-flex h-[52px] w-[178px] items-center justify-center rounded-[18px] border border-[#b8c9aa] bg-[#dbe8d3] px-5 text-center text-sm font-semibold leading-5 text-[#10392d] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:h-auto max-sm:min-h-[48px] max-sm:w-full max-sm:whitespace-normal"
+                    className="mt-7 inline-flex h-[52px] w-[178px] items-center justify-center rounded-[18px] border border-[#c56b45] bg-[#cf744d] px-5 text-center text-sm font-semibold leading-5 text-[#fffaf4] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#b95d38] hover:bg-[#de895d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:h-auto max-sm:min-h-[48px] max-sm:w-full max-sm:whitespace-normal"
                   >
                     AI 일정 짜기
                   </a>
@@ -783,7 +784,7 @@ function App() {
                         <a
                           href={item === '소도시 보기' ? '#home' : '#chat'}
                           onClick={item === '소도시 보기' ? goHome : openChat}
-                          className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#b8c9aa] bg-[#dbe8d3] px-8 text-center text-xs leading-4 text-[#10392d] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] max-sm:h-auto max-sm:min-h-[34px] max-sm:px-4 max-sm:whitespace-normal ${
+                          className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#c56b45] bg-[#cf744d] px-8 text-center text-xs leading-4 text-[#fffaf4] transition hover:border-[#b95d38] hover:bg-[#de895d] max-sm:h-auto max-sm:min-h-[34px] max-sm:px-4 max-sm:whitespace-normal ${
                             index === 0 ? 'font-semibold' : 'font-medium'
                           }`}
                         >

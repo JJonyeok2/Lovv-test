@@ -24,7 +24,9 @@ describe('MVP main entry screen', () => {
   it('shows Google signup before onboarding on first entry', () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: '회원가입하고 Lovv 시작하기' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '서울/오사카 말고, 지금은 이곳' })).toBeInTheDocument()
+    expect(screen.getByText('회원가입하고 Lovv 시작하기')).toBeInTheDocument()
+    expect(screen.queryByText(/저장한 취향과 여행 일정/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Google 간편 로그인으로 시작하기' })).toBeInTheDocument()
     expect(screen.queryByText('MVP mock session')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' })).not.toBeInTheDocument()
@@ -47,7 +49,7 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText('처음엔 작게, 추천은 정확하게')).toBeInTheDocument()
   })
 
-  it('uses a grounded pale green button color that turns yellow on hover', () => {
+  it('uses a warm orange button color with a deeper orange hover state', () => {
     seedUser()
     seedPreference()
     render(<App />)
@@ -57,10 +59,16 @@ describe('MVP main entry screen', () => {
     buttonLabels.forEach((label) => {
       const button = screen.getByRole('link', { name: label })
 
-      expect(button).toHaveClass('bg-[#dbe8d3]')
-      expect(button).toHaveClass('border-[#b8c9aa]')
-      expect(button).toHaveClass('hover:bg-[#ffe55f]')
+      expect(button).toHaveClass('bg-[#cf744d]')
+      expect(button).toHaveClass('border-[#c56b45]')
+      expect(button).toHaveClass('hover:bg-[#de895d]')
     })
+  })
+
+  it('uses a warm patterned app background', () => {
+    render(<App />)
+
+    expect(screen.getByRole('main')).toHaveClass('lovv-warm-pattern')
   })
 
   it('keeps dense text responsive on narrow screens', () => {
@@ -320,7 +328,7 @@ describe('MVP main entry screen', () => {
 
     expect(localStorage.getItem(authStorageKey)).toBeNull()
     expect(localStorage.getItem('lovv.preference')).toContain('경주 · 교토')
-    expect(screen.getByRole('heading', { name: '회원가입하고 Lovv 시작하기' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '서울/오사카 말고, 지금은 이곳' })).toBeInTheDocument()
     expect(screen.queryByText('경주 · 교토 감성으로 시작합니다')).not.toBeInTheDocument()
   })
 })
