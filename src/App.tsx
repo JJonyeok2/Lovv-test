@@ -56,7 +56,22 @@ type PlanDraft = {
   stops: PlanStop[]
 }
 
+type LovvUser = {
+  id: string
+  name: string
+  email: string
+  avatarInitial: string
+}
+
 const preferenceStorageKey = 'lovv.preference'
+const authStorageKey = 'lovv.auth.user'
+
+const mockGoogleUser: LovvUser = {
+  id: 'mock-google-user',
+  name: 'Lovv Tester',
+  email: 'tester@lovv.local',
+  avatarInitial: 'L',
+}
 
 const preferences: Preference[] = [
   {
@@ -151,7 +166,7 @@ const preferences: Preference[] = [
   },
 ]
 
-type View = 'onboarding' | 'home' | 'chat'
+type View = 'auth' | 'onboarding' | 'home' | 'chat'
 
 const durationGuidePrompts = ['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일']
 const festivalThemePrompts: { label: string; choice: FestivalThemeChoice }[] = [
@@ -176,6 +191,31 @@ const readStoredPreference = () => {
           preference.legacyCityPairs?.includes(parsedPreference.cityPair ?? ''),
       ) ?? null
     )
+  } catch {
+    return null
+  }
+}
+
+const readStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem(authStorageKey)
+
+    if (!rawUser) {
+      return null
+    }
+
+    const parsedUser = JSON.parse(rawUser) as Partial<LovvUser>
+
+    if (!parsedUser.id || !parsedUser.name || !parsedUser.email || !parsedUser.avatarInitial) {
+      return null
+    }
+
+    return {
+      id: parsedUser.id,
+      name: parsedUser.name,
+      email: parsedUser.email,
+      avatarInitial: parsedUser.avatarInitial,
+    }
   } catch {
     return null
   }
@@ -324,8 +364,15 @@ const createAssistantReply = (preference: Preference, draft: PlanDraft) =>
 
 function App() {
   const proofItems = ['AI 일정', '챗봇', '소도시 보기']
+  const [currentUser, setCurrentUser] = useState<LovvUser | null>(() => readStoredUser())
   const [selectedPreference, setSelectedPreference] = useState(() => readStoredPreference() ?? preferences[0])
-  const [activeView, setActiveView] = useState<View>(() => (readStoredPreference() ? 'home' : 'onboarding'))
+  const [activeView, setActiveView] = useState<View>(() => {
+    if (!readStoredUser()) {
+      return 'auth'
+    }
+
+    return readStoredPreference() ? 'home' : 'onboarding'
+  })
   const [coverImageIndex, setCoverImageIndex] = useState(0)
   const [hasSelectedCover, setHasSelectedCover] = useState(false)
   const [festivalThemeChoice, setFestivalThemeChoice] = useState<FestivalThemeChoice>('undecided')
@@ -336,6 +383,18 @@ function App() {
   const [planDraft, setPlanDraft] = useState<PlanDraft>(() => createPlanDraft(selectedPreference))
   const selectedCoverImage =
     selectedPreference.coverImages[coverImageIndex] ?? selectedPreference.coverImages[0]
+
+  const signInWithGoogle = () => {
+    localStorage.setItem(authStorageKey, JSON.stringify(mockGoogleUser))
+    setCurrentUser(mockGoogleUser)
+    setActiveView(readStoredPreference() ? 'home' : 'onboarding')
+  }
+
+  const signOut = () => {
+    localStorage.removeItem(authStorageKey)
+    setCurrentUser(null)
+    setActiveView('auth')
+  }
 
   const goHome = (event?: React.MouseEvent<HTMLAnchorElement>) => {
     event?.preventDefault()
@@ -410,7 +469,57 @@ function App() {
 
   return (
     <main className="min-h-dvh bg-[#fffcd9] text-[#10392d]">
-      {activeView === 'onboarding' ? (
+      {activeView === 'auth' ? (
+        <section
+          aria-labelledby="auth-title"
+          className="mx-auto grid min-h-dvh max-w-[1440px] grid-cols-[minmax(0,1fr)_420px] items-center gap-14 px-16 py-12 max-lg:grid-cols-1 max-lg:px-8 max-sm:px-5"
+        >
+          <div className="min-w-0">
+            <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-cover" />
+            <p className="mt-16 text-sm font-bold uppercase tracking-[0.18em] text-[#617566] max-sm:mt-10">
+              Google simple signup
+            </p>
+            <h1
+              id="auth-title"
+              className="mt-4 max-w-[720px] break-keep text-[58px] font-bold leading-[68px] text-[#10392d] max-sm:text-[36px] max-sm:leading-[44px]"
+            >
+              회원가입하고 Lovv 시작하기
+            </h1>
+            <p className="mt-6 max-w-[620px] break-keep text-lg leading-8 text-[#10392d] max-sm:text-base max-sm:leading-7">
+              저장한 취향과 여행 일정을 마이페이지에서 다시 보기 위해 먼저 Google 간편 로그인으로
+              시작합니다.
+            </p>
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                className="inline-flex min-h-[52px] items-center justify-center rounded-[18px] border border-[#b8c9aa] bg-[#dbe8d3] px-6 text-sm font-bold text-[#10392d] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-full"
+              >
+                Google로 시작하기
+              </button>
+              <span className="inline-flex min-h-[34px] items-center rounded-full border border-[#d7d3a2] bg-[#fffced] px-4 py-1 text-[12px] font-bold text-[#10392d]">
+                MVP mock session
+              </span>
+            </div>
+          </div>
+
+          <aside className="rounded-[28px] border border-[#d7d3a2] bg-[#fffffa] p-6 shadow-[0_24px_70px_-42px_rgba(16,57,45,0.45)]">
+            <img
+              src={suitcaseImage}
+              alt="손을 흔드는 초록색 캐리어 캐릭터"
+              className="mx-auto h-[360px] w-full max-w-[280px] rounded-[24px] object-cover"
+            />
+            <div className="mt-6 rounded-[18px] border border-[#bed0b1] bg-[#f0f6e9] p-5">
+              <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
+                Next step
+              </p>
+              <p className="mt-2 break-keep text-base font-bold leading-7 text-[#10392d]">
+                회원가입 후 여행의 분위기를 고르고, AI 일정과 마이페이지 저장 흐름을 이어갑니다.
+              </p>
+            </div>
+          </aside>
+        </section>
+      ) : activeView === 'onboarding' ? (
         <section
           id="onboarding"
           aria-labelledby="onboarding-title"
@@ -573,7 +682,7 @@ function App() {
                   </div>
 
                   <p className="mt-5 line-clamp-3 break-keep text-[13px] leading-6 text-[#617566]">
-                    로그인 없이 MVP를 운영하므로 전체 채팅 로그가 아니라 여행 취향 힌트만 먼저 저장합니다.
+                    현재 MVP는 Google mock 세션과 여행 취향 힌트만 저장하고, 전체 채팅 로그는 저장하지 않습니다.
                   </p>
                 </div>
               </aside>
@@ -592,13 +701,28 @@ function App() {
               >
                 <img src={logoImage} alt="Lovv" className="h-full w-full object-cover" />
               </a>
-              <a
-                href="#home"
-                onClick={goHome}
-                className="inline-flex h-auto min-h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#b8c9aa] bg-[#dbe8d3] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
-              >
-                새 여정 만들기
-              </a>
+              <div className="flex min-w-0 items-center justify-end gap-2">
+                <span className="hidden min-w-0 items-center gap-2 rounded-full border border-[#d7d3a2] bg-[#fffced] px-3 py-1 text-[11px] font-bold text-[#10392d] sm:inline-flex">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#dbe8d3]">
+                    {currentUser?.avatarInitial ?? 'L'}
+                  </span>
+                  <span className="max-w-[120px] truncate">{currentUser?.name ?? 'Lovv Tester'}</span>
+                </span>
+                <a
+                  href="#home"
+                  onClick={goHome}
+                  className="inline-flex h-auto min-h-8 w-[132px] items-center justify-center rounded-[10.5px] border border-[#b8c9aa] bg-[#dbe8d3] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] shadow-[0_3px_10.5px_rgba(16,37,31,0.05)] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d] max-sm:w-auto max-sm:px-2"
+                >
+                  새 여정 만들기
+                </a>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="inline-flex h-auto min-h-8 items-center justify-center rounded-[10.5px] border border-[#d7d3a2] bg-[#fffffa] px-3 text-center text-[10.5px] font-bold leading-4 text-[#10251f] transition hover:border-[#ccb23d] hover:bg-[#ffe55f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#10392d]"
+                >
+                  로그아웃
+                </button>
+              </div>
             </nav>
           </header>
 

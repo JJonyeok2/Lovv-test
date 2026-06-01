@@ -2,12 +2,41 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from './App'
 
+const authStorageKey = 'lovv.auth.user'
+
+const seedUser = () => {
+  localStorage.setItem(
+    authStorageKey,
+    JSON.stringify({
+      id: 'mock-google-user',
+      name: 'Lovv Tester',
+      email: 'tester@lovv.local',
+      avatarInitial: 'L',
+    }),
+  )
+}
+
 const seedPreference = (cityPair = '아산/온양 · 벳푸') => {
   localStorage.setItem('lovv.preference', JSON.stringify({ cityPair }))
 }
 
 describe('MVP main entry screen', () => {
+  it('shows Google signup before onboarding on first entry', () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: '회원가입하고 Lovv 시작하기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Google로 시작하기' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Google로 시작하기' }))
+
+    expect(localStorage.getItem(authStorageKey)).toContain('Lovv Tester')
+    expect(screen.getByRole('heading', { name: '여행의 분위기를 골라주세요' })).toBeInTheDocument()
+  })
+
   it('renders the Lovv landing content from the MVP Figma frame', () => {
+    seedUser()
     seedPreference()
     render(<App />)
 
@@ -18,6 +47,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('uses a grounded pale green button color that turns yellow on hover', () => {
+    seedUser()
     seedPreference()
     render(<App />)
 
@@ -33,6 +63,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('keeps dense text responsive on narrow screens', () => {
+    seedUser()
     seedPreference('제주 · 닛코')
     render(<App />)
 
@@ -67,8 +98,9 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText(/장소를 확정하기 전/)).toHaveClass('line-clamp-2', 'max-sm:text-[13px]')
   })
 
-  it('shows onboarding before the main screen on first entry', () => {
+  it('shows onboarding after signup before the main screen on first entry', () => {
     render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Google로 시작하기' }))
 
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).not.toBeInTheDocument()
@@ -113,6 +145,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('shows and cycles the selected cover only after a preference card is clicked', () => {
+    seedUser()
     render(<App />)
 
     expect(screen.queryByText('Selected Cover')).not.toBeInTheDocument()
@@ -142,6 +175,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('skips onboarding for returning users and opens the chat workspace without a map', () => {
+    seedUser()
     seedPreference('제주 · 닛코')
     render(<App />)
 
@@ -171,6 +205,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('maps legacy Japan-first stored preference to the Korea-first display order', () => {
+    seedUser()
     seedPreference('오키나와 · 제주')
     render(<App />)
 
@@ -181,6 +216,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('asks whether to include festivals when the chat starts', () => {
+    seedUser()
     seedPreference('전주 · 오사카')
     render(<App />)
 
@@ -206,6 +242,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('turns a chat message into an assistant response and updated itinerary detail', () => {
+    seedUser()
     seedPreference('강릉 · 가나자와')
     render(<App />)
 
@@ -230,6 +267,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('submits a duration guide chip without storing the full chat transcript', () => {
+    seedUser()
     seedPreference('아산/온양 · 벳푸')
     render(<App />)
 
@@ -245,6 +283,7 @@ describe('MVP main entry screen', () => {
   })
 
   it('accepts free duration text from day trip through four nights five days', () => {
+    seedUser()
     seedPreference('경주 · 교토')
     render(<App />)
 
@@ -269,5 +308,18 @@ describe('MVP main entry screen', () => {
       expect(screen.getByRole('button', { name: duration })).toBeInTheDocument()
     })
     expect(screen.getByPlaceholderText('동행, 관심사, 걷는 정도를 추가로 입력해 주세요')).toBeInTheDocument()
+  })
+
+  it('logs out to the signup gate without removing the selected preference', () => {
+    seedUser()
+    seedPreference('경주 · 교토')
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+
+    expect(localStorage.getItem(authStorageKey)).toBeNull()
+    expect(localStorage.getItem('lovv.preference')).toContain('경주 · 교토')
+    expect(screen.getByRole('heading', { name: '회원가입하고 Lovv 시작하기' })).toBeInTheDocument()
+    expect(screen.queryByText('경주 · 교토 감성으로 시작합니다')).not.toBeInTheDocument()
   })
 })
