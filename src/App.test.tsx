@@ -140,18 +140,45 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText(/전시와 편집숍 사이 이동을 줄이는 쪽/)).toBeInTheDocument()
   })
 
-  it('submits a suggestion chip without storing the full chat transcript', () => {
+  it('submits a duration guide chip without storing the full chat transcript', () => {
     seedPreference('벳푸 · 온양')
     render(<App />)
 
     fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
-    fireEvent.click(screen.getByRole('button', { name: '혼자 1박 2일' }))
+    fireEvent.click(screen.getByRole('button', { name: '1박 2일' }))
 
     const chatLog = screen.getByRole('log', { name: 'AI 일정 대화' })
 
-    expect(within(chatLog).getByText('혼자 1박 2일')).toBeInTheDocument()
+    expect(within(chatLog).getAllByText('1박 2일')[0]).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '벳푸 · 온양 감성 1박 2일 초안' })).toBeInTheDocument()
     expect(localStorage.getItem('lovv.chat')).toBeNull()
     expect(localStorage.getItem('lovv.messages')).toBeNull()
+  })
+
+  it('accepts free duration text from day trip through four nights five days', () => {
+    seedPreference('교토 · 경주')
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
+
+    const input = screen.getByRole('textbox', { name: '여행 조건 입력' })
+    const sendButton = screen.getByRole('button', { name: '메시지 보내기' })
+
+    fireEvent.change(input, { target: { value: '당일치기로 역사 산책 위주' } })
+    fireEvent.click(sendButton)
+    expect(screen.getByRole('heading', { name: '교토 · 경주 감성 당일치기 초안' })).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: '3박4일로 여유 있게 골목 산책하고 싶어요' } })
+    fireEvent.click(sendButton)
+    expect(screen.getByRole('heading', { name: '교토 · 경주 감성 3박 4일 초안' })).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: '4박 5일까지 가능하고 카페도 넣어줘' } })
+    fireEvent.click(sendButton)
+    expect(screen.getByRole('heading', { name: '교토 · 경주 감성 4박 5일 초안' })).toBeInTheDocument()
+    expect(screen.getByText('일정 기간을 먼저 골라주세요')).toBeInTheDocument()
+    ;['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일'].forEach((duration) => {
+      expect(screen.getByRole('button', { name: duration })).toBeInTheDocument()
+    })
+    expect(screen.getByPlaceholderText('동행, 관심사, 걷는 정도를 추가로 입력해 주세요')).toBeInTheDocument()
   })
 })

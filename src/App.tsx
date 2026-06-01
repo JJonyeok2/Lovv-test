@@ -101,7 +101,7 @@ const preferences: Preference[] = [
 
 type View = 'onboarding' | 'home' | 'chat'
 
-const suggestionPrompts = ['혼자 1박 2일', '친구랑 2박 3일', '걷기 적은 일정', '카페와 전시 추가']
+const durationGuidePrompts = ['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일']
 
 const readStoredPreference = () => {
   try {
@@ -122,16 +122,35 @@ const readStoredPreference = () => {
 const createMessageId = (role: ChatMessage['role'], index: number) => `${role}-${index}`
 
 const getDurationLabel = (message: string) => {
-  if (/2\s*박\s*3\s*일/.test(message)) {
-    return '2박 3일'
-  }
+  const normalizedMessage = message.replace(/\s+/g, '')
 
-  if (/1\s*박\s*2\s*일/.test(message)) {
-    return '1박 2일'
-  }
-
-  if (/당일|하루|1\s*일/.test(message)) {
+  if (!normalizedMessage) {
     return '1일'
+  }
+
+  const nightsMatch = normalizedMessage.match(/([1-4])박([2-5])일/)
+
+  if (nightsMatch) {
+    const nights = Number(nightsMatch[1])
+    const days = nights + 1
+
+    return `${nights}박 ${days}일`
+  }
+
+  if (/당일치기|당일|하루/.test(message)) {
+    return '당일치기'
+  }
+
+  const daysOnlyMatch = normalizedMessage.match(/([1-5])일/)
+
+  if (daysOnlyMatch) {
+    const days = Number(daysOnlyMatch[1])
+
+    if (days <= 1) {
+      return '당일치기'
+    }
+
+    return `${days - 1}박 ${days}일`
   }
 
   return '1일'
@@ -610,8 +629,11 @@ function App() {
                       ) : null}
                     </div>
                     <div className="border-t border-[#e0d6a8] p-5">
+                      <p className="mb-2 break-keep text-[12px] font-bold text-[#617566]">
+                        일정 기간을 먼저 골라주세요
+                      </p>
                       <div className="mb-3 flex flex-wrap gap-2">
-                        {suggestionPrompts.map((prompt) => (
+                        {durationGuidePrompts.map((prompt) => (
                           <button
                             key={prompt}
                             type="button"
@@ -627,7 +649,7 @@ function App() {
                           aria-label="여행 조건 입력"
                           value={chatInput}
                           onChange={(event) => setChatInput(event.target.value)}
-                          placeholder="여행 기간, 동행, 관심사를 입력해 주세요"
+                          placeholder="동행, 관심사, 걷는 정도를 추가로 입력해 주세요"
                           className="min-h-12 min-w-0 rounded-full border border-[#bed0b1] bg-[#f7f5df] px-5 py-2 break-keep text-sm leading-5 text-[#10392d] outline-none transition placeholder:text-[#617566] focus:border-[#10392d] focus:bg-[#fffffa] max-sm:text-[13px]"
                         />
                         <button
