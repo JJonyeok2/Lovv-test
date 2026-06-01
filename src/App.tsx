@@ -355,9 +355,6 @@ function App() {
             <div>
               <div className="flex items-center justify-between gap-4">
                 <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-cover" />
-                <span className="inline-flex h-9 items-center rounded-full border border-[#d7d3a2] bg-[#fffffa] px-4 text-[12px] font-bold text-[#617566]">
-                  First Issue
-                </span>
               </div>
 
               <div className="mt-10 grid grid-cols-[minmax(0,1fr)_260px] items-end gap-8 max-lg:grid-cols-1">
@@ -378,10 +375,7 @@ function App() {
                 </div>
 
                 <div className="rounded-[22px] border border-[#d7d3a2] bg-[#fffffa] p-5 shadow-[0_18px_50px_-32px_rgba(16,57,45,0.28)]">
-                  <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
-                    Before the map
-                  </p>
-                  <p className="mt-3 break-keep text-[15px] font-bold leading-6 text-[#0b3b2e] max-sm:text-sm">
+                  <p className="break-keep text-[15px] font-bold leading-6 text-[#0b3b2e] max-sm:text-sm">
                     이번 선택으로 AI 일정의 말투와 지도 후보가 먼저 정리됩니다
                   </p>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-[#0b3b2e]">
@@ -402,9 +396,6 @@ function App() {
                       도시의 분위기로 고르는 여행 취향
                     </h2>
                   </div>
-                  <p className="max-w-[320px] break-keep text-sm leading-6 text-[#617566] max-md:mt-3">
-                    마음에 가까운 장면을 고르면, 다음 화면의 챗봇과 지도 추천이 이 톤에서 시작됩니다.
-                  </p>
                 </div>
 
                 <div className="mt-5 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">

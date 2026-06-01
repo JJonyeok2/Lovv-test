@@ -75,6 +75,9 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText('Lovv City Mood Journal')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '이번 여행의 첫 분위기를 골라주세요' })).toBeInTheDocument()
     expect(screen.getByText('이번 선택으로 AI 일정의 말투와 지도 후보가 먼저 정리됩니다')).toBeInTheDocument()
+    expect(screen.queryByText('First Issue')).not.toBeInTheDocument()
+    expect(screen.queryByText('Before the map')).not.toBeInTheDocument()
+    expect(screen.queryByText(/마음에 가까운 장면을 고르면/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /후쿠오카 · 부산/ }))
     fireEvent.click(screen.getByRole('button', { name: '이 취향으로 Lovv 시작하기' }))
