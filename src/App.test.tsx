@@ -87,6 +87,35 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText('후쿠오카 · 부산 감성으로 시작합니다')).toBeInTheDocument()
   })
 
+  it('shows and cycles the selected cover only after a preference card is clicked', () => {
+    render(<App />)
+
+    expect(screen.queryByText('Selected Cover')).not.toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '교토 대표 이미지' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /교토 · 경주/ })).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(screen.getByRole('button', { name: /교토 · 경주/ }))
+
+    expect(screen.getByRole('button', { name: /교토 · 경주/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('img', { name: '교토 대표 이미지' })).toBeInTheDocument()
+    expect(screen.getByText('현재 표시: 교토')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '다음 도시 이미지 보기' }))
+
+    expect(screen.getByRole('img', { name: '경주 대표 이미지' })).toBeInTheDocument()
+    expect(screen.getByText('현재 표시: 경주')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /후쿠오카 · 부산/ }))
+
+    expect(screen.getByRole('img', { name: '후쿠오카 대표 이미지' })).toBeInTheDocument()
+    expect(screen.getByText('현재 표시: 후쿠오카')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '다음 도시 이미지 보기' }))
+
+    expect(screen.getByRole('img', { name: '부산 대표 이미지' })).toBeInTheDocument()
+    expect(screen.getByText('현재 표시: 부산')).toBeInTheDocument()
+  })
+
   it('skips onboarding for returning users and opens the chat workspace without a map', () => {
     seedPreference('오키나와 · 제주')
     render(<App />)

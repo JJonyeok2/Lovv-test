@@ -1,6 +1,23 @@
 import { useState } from 'react'
 import logoImage from './assets/lovv-logo.png'
 import suitcaseImage from './assets/lovv-suitcase-hi.png'
+import beppuImage from './assets/cities/beppu.jpg'
+import busanImage from './assets/cities/busan.jpg'
+import fukuokaImage from './assets/cities/fukuoka.jpg'
+import gangwonImage from './assets/cities/gangwon.jpg'
+import gyeongjuImage from './assets/cities/gyeongju.jpg'
+import jejuImage from './assets/cities/jeju.jpg'
+import kyotoImage from './assets/cities/kyoto.jpg'
+import okinawaImage from './assets/cities/okinawa.jpg'
+import onyangImage from './assets/cities/onyang.jpg'
+import sapporoImage from './assets/cities/sapporo.jpg'
+import seoulImage from './assets/cities/seoul.jpg'
+import tokyoImage from './assets/cities/tokyo.jpg'
+
+type CityCoverImage = {
+  city: string
+  image: string
+}
 
 type Preference = {
   cityPair: string
@@ -11,6 +28,7 @@ type Preference = {
   issue: string
   editorialNote: string
   routeHint: string
+  coverImages: CityCoverImage[]
 }
 
 type ChatMessage = {
@@ -46,6 +64,10 @@ const preferences: Preference[] = [
     issue: 'No. 01',
     editorialNote: '오래된 골목, 낮은 담장, 천천히 머무는 하루에 가까워요.',
     routeHint: '전통 거리 · 찻집 · 야경 산책',
+    coverImages: [
+      { city: '교토', image: kyotoImage },
+      { city: '경주', image: gyeongjuImage },
+    ],
   },
   {
     cityPair: '후쿠오카 · 부산',
@@ -56,6 +78,10 @@ const preferences: Preference[] = [
     issue: 'No. 02',
     editorialNote: '시장과 포장마차, 바다 가까운 식탁을 따라 움직이는 여행이에요.',
     routeHint: '시장 탐방 · 로컬 식당 · 항구 산책',
+    coverImages: [
+      { city: '후쿠오카', image: fukuokaImage },
+      { city: '부산', image: busanImage },
+    ],
   },
   {
     cityPair: '오키나와 · 제주',
@@ -66,6 +92,10 @@ const preferences: Preference[] = [
     issue: 'No. 03',
     editorialNote: '바다와 바람을 오래 바라보고, 일정 사이에 여백을 두는 쪽이에요.',
     routeHint: '해변 드라이브 · 자연 전망 · 느린 카페',
+    coverImages: [
+      { city: '오키나와', image: okinawaImage },
+      { city: '제주', image: jejuImage },
+    ],
   },
   {
     cityPair: '벳푸 · 온양',
@@ -76,6 +106,10 @@ const preferences: Preference[] = [
     issue: 'No. 04',
     editorialNote: '많이 보기보다 잘 쉬는 여행, 숙소와 동네의 리듬을 중시해요.',
     routeHint: '온천 거리 · 로컬 식사 · 숙소 휴식',
+    coverImages: [
+      { city: '벳푸', image: beppuImage },
+      { city: '온양', image: onyangImage },
+    ],
   },
   {
     cityPair: '삿포로 · 강원',
@@ -86,6 +120,10 @@ const preferences: Preference[] = [
     issue: 'No. 05',
     editorialNote: '계절의 색이 선명한 풍경과 전망 좋은 동선을 먼저 떠올려요.',
     routeHint: '전망 포인트 · 계절 식당 · 숲길',
+    coverImages: [
+      { city: '삿포로', image: sapporoImage },
+      { city: '강원', image: gangwonImage },
+    ],
   },
   {
     cityPair: '도쿄 · 서울',
@@ -96,6 +134,10 @@ const preferences: Preference[] = [
     issue: 'No. 06',
     editorialNote: '전시와 편집숍, 새로운 동네의 감각을 촘촘히 따라가요.',
     routeHint: '전시 공간 · 편집숍 · 밤 산책',
+    coverImages: [
+      { city: '도쿄', image: tokyoImage },
+      { city: '서울', image: seoulImage },
+    ],
   },
 ]
 
@@ -219,11 +261,15 @@ function App() {
   const proofItems = ['AI 일정', '챗봇', '소도시 보기']
   const [selectedPreference, setSelectedPreference] = useState(() => readStoredPreference() ?? preferences[0])
   const [activeView, setActiveView] = useState<View>(() => (readStoredPreference() ? 'home' : 'onboarding'))
+  const [coverImageIndex, setCoverImageIndex] = useState(0)
+  const [hasSelectedCover, setHasSelectedCover] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
     createInitialChatMessages(selectedPreference),
   )
   const [planDraft, setPlanDraft] = useState<PlanDraft>(() => createPlanDraft(selectedPreference))
+  const selectedCoverImage =
+    selectedPreference.coverImages[coverImageIndex] ?? selectedPreference.coverImages[0]
 
   const goHome = (event?: React.MouseEvent<HTMLAnchorElement>) => {
     event?.preventDefault()
@@ -250,6 +296,16 @@ function App() {
   const enterMainWithPreference = () => {
     storeSelectedPreference()
     setActiveView('home')
+  }
+
+  const selectPreference = (preference: Preference) => {
+    setSelectedPreference(preference)
+    setCoverImageIndex(0)
+    setHasSelectedCover(true)
+  }
+
+  const showNextCoverImage = () => {
+    setCoverImageIndex((currentIndex) => (currentIndex + 1) % selectedPreference.coverImages.length)
   }
 
   const submitChatMessage = (message: string) => {
@@ -291,7 +347,11 @@ function App() {
           aria-labelledby="onboarding-title"
           className="mx-auto min-h-dvh max-w-[1440px] px-12 py-9 max-lg:px-8 max-sm:px-5"
         >
-          <div className="grid min-h-[calc(100dvh-72px)] grid-cols-[minmax(0,1fr)_420px] gap-10 max-xl:grid-cols-1">
+          <div
+            className={`grid min-h-[calc(100dvh-72px)] gap-10 max-xl:grid-cols-1 ${
+              hasSelectedCover ? 'grid-cols-[minmax(0,1fr)_420px]' : 'grid-cols-1'
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between gap-4">
                 <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-cover" />
@@ -349,14 +409,14 @@ function App() {
 
                 <div className="mt-5 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
                   {preferences.map((preference) => {
-                    const isSelected = selectedPreference.cityPair === preference.cityPair
+                    const isSelected = hasSelectedCover && selectedPreference.cityPair === preference.cityPair
 
                     return (
                       <button
                         key={preference.cityPair}
                         type="button"
                         aria-pressed={isSelected}
-                        onClick={() => setSelectedPreference(preference)}
+                        onClick={() => selectPreference(preference)}
                         className={`flex min-h-[176px] min-w-0 flex-col justify-between rounded-[22px] border p-5 text-left transition hover:-translate-y-0.5 hover:border-[#10392d] hover:bg-[#f0f6e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b2e] ${
                           isSelected
                             ? 'border-[#10392d] bg-[#e7f0df] shadow-[0_18px_40px_-28px_rgba(16,57,45,0.55)]'
@@ -417,46 +477,61 @@ function App() {
               </section>
             </div>
 
-            <aside className="sticky top-9 h-fit rounded-[28px] border border-[#d7d3a2] bg-[#fffffa] p-5 shadow-[0_24px_70px_-42px_rgba(16,57,45,0.45)] max-xl:static">
-              <div className="relative overflow-hidden rounded-[24px] border border-[#e0d6a8] bg-[#f0f6e9] px-6 pt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#617566]">
-                    Selected Cover
-                  </span>
-                  <span className="rounded-full border border-[#d7d3a2] bg-[#ffe25a] px-3 py-1 text-[12px] font-bold text-[#0b3b2e]">
-                    {selectedPreference.tag}
-                  </span>
-                </div>
-                <img
-                  src={suitcaseImage}
-                  alt="손을 흔드는 초록색 캐리어 캐릭터"
-                  className="mx-auto mt-4 h-[310px] w-[230px] rounded-t-[24px] object-cover"
-                />
-              </div>
-
-              <div className="px-2 pb-2 pt-5">
-                <p className="text-sm font-semibold text-[#617566]">오늘의 취향 여정</p>
-                <h2 className="mt-2 break-keep text-[34px] font-bold leading-10 text-[#0b3b2e] max-sm:text-3xl max-sm:leading-9">
-                  {selectedPreference.cityPair}
-                </h2>
-                <p className="mt-4 line-clamp-3 break-keep text-sm leading-6 text-[#0b3b2e]">
-                  {selectedPreference.editorialNote}
-                </p>
-
-                <div className="mt-5 rounded-[18px] border border-[#bed0b1] bg-[#fffced] p-4">
-                  <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
-                    First route note
-                  </p>
-                  <p className="mt-2 line-clamp-2 break-keep text-sm font-bold leading-6 text-[#0b3b2e]">
-                    {selectedPreference.routeHint}
-                  </p>
+            {hasSelectedCover ? (
+              <aside className="sticky top-9 h-fit rounded-[28px] border border-[#d7d3a2] bg-[#fffffa] p-5 shadow-[0_24px_70px_-42px_rgba(16,57,45,0.45)] max-xl:static">
+                <div className="group relative overflow-hidden rounded-[24px] border border-[#e0d6a8] bg-[#f0f6e9]">
+                  <div className="absolute left-5 right-5 top-5 z-10 flex items-center justify-between gap-3">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#617566]">
+                      Selected Cover
+                    </span>
+                    <span className="rounded-full border border-[#d7d3a2] bg-[#ffe25a] px-3 py-1 text-[12px] font-bold text-[#0b3b2e]">
+                      {selectedPreference.tag}
+                    </span>
+                  </div>
+                  <img
+                    src={selectedCoverImage.image}
+                    alt={`${selectedCoverImage.city} 대표 이미지`}
+                    className="h-[360px] w-full object-cover max-sm:h-[260px]"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-[#0b3b2e]/75 via-[#0b3b2e]/20 to-transparent p-5 max-sm:flex-col max-sm:items-start">
+                    <span className="rounded-full bg-[#fffffa]/95 px-4 py-2 text-[12px] font-bold text-[#0b3b2e] shadow-[0_10px_30px_-22px_rgba(0,0,0,0.5)]">
+                      현재 표시: {selectedCoverImage.city}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="다음 도시 이미지 보기"
+                      onClick={showNextCoverImage}
+                      className="inline-flex min-h-9 items-center rounded-full border border-[#d7d3a2] bg-[#ffe25a] px-4 py-1 text-[12px] font-bold text-[#0b3b2e] opacity-0 shadow-[0_10px_30px_-22px_rgba(0,0,0,0.5)] transition hover:bg-[#ffe55f] focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fffffa] group-hover:opacity-100 max-sm:opacity-100"
+                    >
+                      다음
+                    </button>
+                  </div>
                 </div>
 
-                <p className="mt-5 line-clamp-3 break-keep text-[13px] leading-6 text-[#617566]">
-                  로그인 없이 MVP를 운영하므로 전체 채팅 로그가 아니라 여행 취향 힌트만 먼저 저장합니다.
-                </p>
-              </div>
-            </aside>
+                <div className="px-2 pb-2 pt-5">
+                  <p className="text-sm font-semibold text-[#617566]">오늘의 취향 여정</p>
+                  <h2 className="mt-2 break-keep text-[34px] font-bold leading-10 text-[#0b3b2e] max-sm:text-3xl max-sm:leading-9">
+                    {selectedPreference.cityPair}
+                  </h2>
+                  <p className="mt-4 line-clamp-3 break-keep text-sm leading-6 text-[#0b3b2e]">
+                    {selectedPreference.editorialNote}
+                  </p>
+
+                  <div className="mt-5 rounded-[18px] border border-[#bed0b1] bg-[#fffced] p-4">
+                    <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#617566]">
+                      First route note
+                    </p>
+                    <p className="mt-2 line-clamp-2 break-keep text-sm font-bold leading-6 text-[#0b3b2e]">
+                      {selectedPreference.routeHint}
+                    </p>
+                  </div>
+
+                  <p className="mt-5 line-clamp-3 break-keep text-[13px] leading-6 text-[#617566]">
+                    로그인 없이 MVP를 운영하므로 전체 채팅 로그가 아니라 여행 취향 힌트만 먼저 저장합니다.
+                  </p>
+                </div>
+              </aside>
+            ) : null}
           </div>
         </section>
       ) : (
