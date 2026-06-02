@@ -895,9 +895,37 @@ function App() {
                 </div>
               </section>
 
+              <section className="mx-auto max-w-[1440px] px-[55px] pb-8 max-sm:px-5">
+                <div className="grid min-h-[126px] grid-cols-[1fr_auto] items-center gap-8 rounded-3xl border border-[#F3B489] bg-white/80 px-[31px] py-7 shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] max-lg:grid-cols-1">
+                  <div>
+                    <h2 className="break-keep text-[22px] font-semibold leading-7 text-[#33271E] max-sm:text-xl">
+                      처음엔 작게, 추천은 정확하게
+                    </h2>
+                    <p className="mt-2 break-keep text-sm leading-5 text-[#33271E]">
+                      한국과 일본 소도시부터 검증하고, 사용자의 테마 선택으로 일정 추천 품질을 높입니다.
+                    </p>
+                  </div>
+                  <ul className="flex flex-wrap gap-3">
+                    {proofItems.map((item, index) => (
+                      <li key={item}>
+                        <a
+                          href={item === '소도시 보기' ? '#home' : '#chat'}
+                          onClick={item === '소도시 보기' ? goHome : openChat}
+                          className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-8 text-center text-xs leading-4 text-[#33271E] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] max-sm:h-auto max-sm:min-h-[34px] max-sm:px-4 max-sm:whitespace-normal ${
+                            index === 0 ? 'font-semibold' : 'font-medium'
+                          }`}
+                        >
+                          {item}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+
               <section
                 aria-labelledby="small-city-map-title"
-                className="mx-auto max-w-[1440px] px-[55px] pb-8 max-sm:px-5"
+                className="mx-auto max-w-[1440px] px-[55px] pb-10 max-sm:px-5"
               >
                 <div className="grid min-h-[320px] grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-6 rounded-3xl border border-[#F3B489] bg-white/80 p-6 shadow-[0_18px_50px_-34px_rgba(51,39,30,0.24)] max-lg:grid-cols-1">
                   <div className="flex min-w-0 flex-col justify-between gap-6">
@@ -967,34 +995,6 @@ function App() {
                       {selectedPreference.tag} 테마 후보를 먼저 띄워두고, 일정 대화에서 기간과 축제 포함 여부를 좁혀갑니다.
                     </div>
                   </div>
-                </div>
-              </section>
-
-              <section className="mx-auto max-w-[1440px] px-[55px] pb-10 max-sm:px-5">
-                <div className="grid min-h-[126px] grid-cols-[1fr_auto] items-center gap-8 rounded-3xl border border-[#F3B489] bg-white/80 px-[31px] py-7 shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] max-lg:grid-cols-1">
-                  <div>
-                    <h2 className="break-keep text-[22px] font-semibold leading-7 text-[#33271E] max-sm:text-xl">
-                      처음엔 작게, 추천은 정확하게
-                    </h2>
-                    <p className="mt-2 break-keep text-sm leading-5 text-[#33271E]">
-                      한국과 일본 소도시부터 검증하고, 사용자의 테마 선택으로 일정 추천 품질을 높입니다.
-                    </p>
-                  </div>
-                  <ul className="flex flex-wrap gap-3">
-                    {proofItems.map((item, index) => (
-                      <li key={item}>
-                        <a
-                          href={item === '소도시 보기' ? '#home' : '#chat'}
-                          onClick={item === '소도시 보기' ? goHome : openChat}
-                          className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-8 text-center text-xs leading-4 text-[#33271E] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] max-sm:h-auto max-sm:min-h-[34px] max-sm:px-4 max-sm:whitespace-normal ${
-                            index === 0 ? 'font-semibold' : 'font-medium'
-                          }`}
-                        >
-                          {item}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </section>
 

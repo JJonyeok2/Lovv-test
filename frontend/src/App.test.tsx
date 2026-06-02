@@ -72,7 +72,13 @@ describe('MVP main entry screen', () => {
       expect(screen.getByText(tag)).toBeInTheDocument()
     })
     expect(screen.queryByText('부산 · 오키나와 감성으로 시작합니다')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '소도시 지도 프리뷰' })).toBeInTheDocument()
+    const proofHeading = screen.getByText('처음엔 작게, 추천은 정확하게')
+    const mapHeading = screen.getByRole('heading', { name: '소도시 지도 프리뷰' })
+
+    expect(mapHeading).toBeInTheDocument()
+    expect(Boolean(proofHeading.compareDocumentPosition(mapHeading) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true,
+    )
     expect(screen.getByLabelText('부산 소도시 지도 마커')).toBeInTheDocument()
     expect(screen.getByLabelText('오키나와 소도시 지도 마커')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '빠른 이동 메뉴 열기' })).toBeInTheDocument()
