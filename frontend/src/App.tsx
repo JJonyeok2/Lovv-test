@@ -1092,6 +1092,51 @@ function App() {
                         </div>
                       ))}
 
+                      <div className="max-w-[560px] space-y-3">
+                        <div className="inline-flex max-w-full rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] px-5 py-4 text-sm font-bold leading-6 text-[#33271E] max-sm:text-[13px] max-sm:leading-6">
+                          축제 테마를 일정에 포함할까요?
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {festivalThemePrompts.map((prompt) => {
+                            const isSelected = festivalThemeChoice === prompt.choice
+
+                            return (
+                              <button
+                                key={prompt.choice}
+                                type="button"
+                                aria-pressed={isSelected}
+                                onClick={() => submitChatMessage(prompt.label)}
+                                className={`inline-flex min-h-[36px] items-center rounded-full border px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                                  isSelected
+                                    ? 'border-[#A92B10] bg-[#F36B12]'
+                                    : 'border-[#F3B489] bg-[#FFF0E4]'
+                                }`}
+                              >
+                                {prompt.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="max-w-[680px] space-y-3">
+                        <div className="inline-flex max-w-full rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] px-5 py-4 text-sm font-bold leading-6 text-[#33271E] max-sm:text-[13px] max-sm:leading-6">
+                          일정 기간을 먼저 골라주세요
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {durationGuidePrompts.map((prompt) => (
+                            <button
+                              key={prompt}
+                              type="button"
+                              onClick={() => submitChatMessage(prompt)}
+                              className="inline-flex min-h-[36px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                            >
+                              {prompt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {chatMessages.length > 2 ? (
                         <div className="rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] p-5">
                           <div className="flex flex-wrap items-center gap-2">
@@ -1112,41 +1157,6 @@ function App() {
                       ) : null}
                     </div>
                     <div className="border-t border-[#F3B489] p-5">
-                      <p className="mb-2 break-keep text-[12px] font-bold text-[#33271E]">
-                        축제 테마를 일정에 포함할까요?
-                      </p>
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        {festivalThemePrompts.map((prompt) => {
-                          const isSelected = festivalThemeChoice === prompt.choice
-
-                          return (
-                            <button
-                              key={prompt.choice}
-                              type="button"
-                              aria-pressed={isSelected}
-                              onClick={() => submitChatMessage(prompt.label)}
-                              className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                            >
-                              {prompt.label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <p className="mb-2 break-keep text-[12px] font-bold text-[#33271E]">
-                        일정 기간을 먼저 골라주세요
-                      </p>
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {durationGuidePrompts.map((prompt) => (
-                          <button
-                            key={prompt}
-                            type="button"
-                            onClick={() => submitChatMessage(prompt)}
-                            className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
                       <form onSubmit={submitChatForm} className="grid grid-cols-[1fr_auto] gap-3 max-sm:grid-cols-1">
                         <input
                           aria-label="여행 조건 입력"

@@ -293,13 +293,14 @@ describe('MVP main entry screen', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
 
-    expect(screen.getByText(/축제를 일정 테마에 포함할까요/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '축제 포함' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '축제 제외' })).toBeInTheDocument()
+    const chatLog = screen.getByRole('log', { name: 'AI 일정 대화' })
+
+    expect(within(chatLog).getByText('축제 테마를 일정에 포함할까요?')).toBeInTheDocument()
+    expect(within(chatLog).getByText('일정 기간을 먼저 골라주세요')).toBeInTheDocument()
+    expect(within(chatLog).getByRole('button', { name: '축제 포함' })).toBeInTheDocument()
+    expect(within(chatLog).getByRole('button', { name: '축제 제외' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '축제 포함' }))
-
-    const chatLog = screen.getByRole('log', { name: 'AI 일정 대화' })
 
     expect(within(chatLog).getAllByText('축제 포함')[0]).toBeInTheDocument()
     expect(screen.getByText('축제 포함 반영')).toBeInTheDocument()
@@ -374,9 +375,11 @@ describe('MVP main entry screen', () => {
     fireEvent.change(input, { target: { value: '4박 5일까지 가능하고 카페도 넣어줘' } })
     fireEvent.click(sendButton)
     expect(screen.getByRole('heading', { name: '경주 · 교토 감성 4박 5일 초안' })).toBeInTheDocument()
-    expect(screen.getByText('일정 기간을 먼저 골라주세요')).toBeInTheDocument()
+    const chatLog = screen.getByRole('log', { name: 'AI 일정 대화' })
+
+    expect(within(chatLog).getByText('일정 기간을 먼저 골라주세요')).toBeInTheDocument()
     ;['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일'].forEach((duration) => {
-      expect(screen.getByRole('button', { name: duration })).toBeInTheDocument()
+      expect(within(chatLog).getByRole('button', { name: duration })).toBeInTheDocument()
     })
     expect(screen.getByPlaceholderText('동행, 관심사, 걷는 정도를 추가로 입력해 주세요')).toBeInTheDocument()
   })
