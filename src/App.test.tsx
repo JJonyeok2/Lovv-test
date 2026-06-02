@@ -33,11 +33,20 @@ describe('MVP main entry screen', () => {
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
     expect(screen.queryByText('Next step')).not.toBeInTheDocument()
     expect(screen.queryByText(/회원가입 후 여행의 분위기/)).not.toBeInTheDocument()
-
-    const characterImage = screen.getByRole('img', { name: '손을 흔드는 오렌지색 캐리어 캐릭터' })
-
-    expect(characterImage).toHaveClass('object-contain')
-    expect(characterImage).not.toHaveClass('rounded-[24px]')
+    expect(screen.getByTestId('auth-fixed-panel')).toHaveClass('border-r')
+    expect(screen.getByTestId('auth-scroll-panel')).toHaveClass('overflow-y-auto')
+    expect(screen.queryByRole('img', { name: '손을 흔드는 오렌지색 캐리어 캐릭터' })).not.toBeInTheDocument()
+    expect(screen.getByText('지금은 이곳')).toHaveClass('text-[#F36B12]')
+    expect(screen.getByRole('heading', { name: '소도시 여행의 새로운 기준, Lovv' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Lovv 서비스 설명' })).toHaveStyle({
+      listStyleType: 'square',
+    })
+    expect(
+      screen.getByText('Lovv는 소도시 여행 추천 큐레이션 서비스를 제공합니다.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('숨겨진 장소')).toBeInTheDocument()
+    expect(screen.getByText('취향 큐레이션')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Lovv의 여정' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Google 간편 로그인으로 시작하기' }))
 

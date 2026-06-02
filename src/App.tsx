@@ -73,6 +73,42 @@ const mockGoogleUser: LovvUser = {
   avatarInitial: 'L',
 }
 
+const authServiceBullets = [
+  'Lovv는 소도시 여행 추천 큐레이션 서비스를 제공합니다.',
+  '대도시 대신 취향과 분위기에 가까운 한국과 일본의 작은 도시 후보를 먼저 정리합니다.',
+  'AI 챗봇으로 여행 기간, 축제 포함 여부, 걷는 양을 대화로 좁혀갑니다.',
+  '추천 일정은 세부 일정 확인, 좋아요, 마이페이지 저장 흐름으로 확장됩니다.',
+]
+
+const authServiceCards = [
+  {
+    title: '숨겨진 장소',
+    body: '관광객은 모르는 현지 감각의 작은 도시와 동네를 먼저 제안합니다.',
+  },
+  {
+    title: '취향 큐레이션',
+    body: 'AI가 사용자의 속도와 장면 선택을 바탕으로 일정 후보를 정리합니다.',
+  },
+]
+
+const authJourneyItems = [
+  {
+    date: 'Step 01',
+    title: '여행 분위기 선택',
+    body: '도시 이름보다 여행의 속도와 장면을 먼저 고릅니다.',
+  },
+  {
+    date: 'Step 02',
+    title: 'AI 일정 대화',
+    body: '기간, 축제 포함 여부, 걷는 양을 채팅으로 좁힙니다.',
+  },
+  {
+    date: 'Step 03',
+    title: '소도시 일정 저장',
+    body: '마음에 드는 추천 일정은 나중에 마이페이지에 담을 수 있게 확장합니다.',
+  },
+]
+
 const preferences: Preference[] = [
   {
     cityPair: '아산/온양 · 벳푸',
@@ -495,41 +531,114 @@ function App() {
       {activeView === 'auth' ? (
         <section
           aria-labelledby="auth-title"
-          className="mx-auto grid min-h-dvh max-w-[1440px] grid-cols-[minmax(0,1fr)_420px] items-center gap-14 px-16 py-12 max-lg:grid-cols-1 max-lg:px-8 max-sm:px-5"
+          className="mx-auto grid min-h-dvh max-w-[1440px] grid-cols-[minmax(360px,440px)_minmax(0,1fr)] lg:h-dvh lg:overflow-hidden max-lg:grid-cols-1"
         >
-          <div className="min-w-0">
-            <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-contain" />
-            <p className="mt-16 text-sm font-bold uppercase tracking-[0.18em] text-[#33271E] max-sm:mt-10">
-              Google simple signup
-            </p>
-            <h1
-              id="auth-title"
-              aria-label="서울/오사카 말고, 지금은 이곳"
-              className="mt-4 max-w-[720px] break-keep text-[58px] font-bold leading-[68px] text-[#33271E] max-sm:text-[36px] max-sm:leading-[44px]"
-            >
-              <span className="block">서울/오사카 말고,</span>
-              <span className="block">지금은 이곳</span>
-            </h1>
-            <p className="mt-7 break-keep text-sm font-bold text-[#33271E]">
-              회원가입하고 Lovv 시작하기
-            </p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
+          <div
+            data-testid="auth-fixed-panel"
+            className="flex min-h-dvh min-w-0 flex-col justify-between border-r border-[#A92B10]/70 px-16 py-16 max-lg:min-h-0 max-lg:border-b max-lg:border-r-0 max-lg:px-8 max-lg:py-10 max-sm:px-5"
+          >
+            <div>
+              <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-contain" />
+            </div>
+
+            <div className="my-16 min-w-0 max-lg:my-10">
+              <p className="text-sm font-black uppercase tracking-[0.26em] text-[#33271E] max-sm:text-[12px]">
+                Google simple signup
+              </p>
+              <h1
+                id="auth-title"
+                aria-label="서울/오사카 말고, 지금은 이곳"
+                className="mt-7 max-w-[360px] break-keep text-[48px] font-black leading-[58px] text-[#33271E] max-sm:text-[36px] max-sm:leading-[44px]"
+              >
+                <span className="block">서울/오사카 말고,</span>
+                <span className="block text-[#F36B12]">지금은 이곳</span>
+              </h1>
+              <p className="mt-6 break-keep text-sm font-bold text-[#33271E]">
+                회원가입하고 Lovv 시작하기
+              </p>
               <button
                 type="button"
                 onClick={signInWithGoogle}
-                className="inline-flex min-h-[52px] items-center justify-center rounded-[18px] border border-[#A92B10] bg-[#F36B12] px-6 text-sm font-bold text-[#33271E] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#A92B10] hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:w-full"
+                className="mt-8 inline-flex min-h-[54px] w-full max-w-[340px] items-center justify-center rounded-[14px] border border-[#A92B10] bg-[#F36B12] px-6 text-sm font-black text-[#33271E] shadow-[0_14px_32px_-18px_rgba(51,39,30,0.45)] transition hover:-translate-y-0.5 hover:border-[#A92B10] hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
               >
                 Google 간편 로그인으로 시작하기
               </button>
             </div>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-bold text-[#33271E]/80">
+              <a href="#auth-title" className="hover:text-[#F36B12]">
+                이용약관
+              </a>
+              <a href="#auth-title" className="hover:text-[#F36B12]">
+                개인정보처리방침
+              </a>
+            </div>
           </div>
 
-          <div className="flex items-center justify-center">
-            <img
-              src={suitcaseImage}
-              alt="손을 흔드는 오렌지색 캐리어 캐릭터"
-              className="h-[520px] w-full max-w-[420px] object-contain max-sm:h-auto"
-            />
+          <div
+            data-testid="auth-scroll-panel"
+            className="min-h-dvh overflow-y-auto px-20 py-20 max-lg:min-h-0 max-lg:overflow-visible max-lg:px-8 max-lg:py-12 max-sm:px-5"
+          >
+            <div className="mx-auto max-w-[720px] pb-16">
+              <div className="inline-flex min-h-[32px] items-center rounded-full bg-[#FFF0E4] px-4 text-[12px] font-black text-[#A92B10]">
+                소도시 여행의 새로운 기준
+              </div>
+              <h2 className="mt-8 max-w-[560px] break-keep text-[44px] font-black leading-[54px] text-[#33271E] max-sm:text-[32px] max-sm:leading-10">
+                소도시 여행의 새로운 기준, Lovv
+              </h2>
+              <p className="mt-7 max-w-[610px] break-keep text-base font-semibold leading-8 text-[#33271E] max-sm:text-sm max-sm:leading-7">
+                익숙한 대도시의 화려함 뒤에 숨겨진 진짜 로컬의 매력을 발견하세요.
+                Lovv는 한국과 일본의 작지만 보석 같은 도시들을 연결하여 당신만의 특별한 여행
+                이야기를 만들어냅니다.
+              </p>
+
+              <ul
+                aria-label="Lovv 서비스 설명"
+                className="mt-8 space-y-3 pl-5 text-sm font-bold leading-7 text-[#33271E]"
+                style={{ listStyleType: 'square' }}
+              >
+                {authServiceBullets.map((item) => (
+                  <li key={item} className="break-keep pl-1">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-12 grid grid-cols-2 gap-5 max-md:grid-cols-1">
+                {authServiceCards.map((card) => (
+                  <article
+                    key={card.title}
+                    className="min-h-[150px] rounded-[20px] border border-[#F3B489] bg-[#FFE4D4] p-6 shadow-[0_18px_40px_-32px_rgba(51,39,30,0.32)]"
+                  >
+                    <div className="size-8 rounded-full border border-[#A92B10] bg-[#FFF8EE]" />
+                    <h3 className="mt-4 text-base font-black text-[#33271E]">{card.title}</h3>
+                    <p className="mt-2 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                      {card.body}
+                    </p>
+                  </article>
+                ))}
+              </div>
+
+              <section aria-labelledby="auth-journey-title" className="mt-20">
+                <h3 id="auth-journey-title" className="text-2xl font-black text-[#33271E]">
+                  Lovv의 여정
+                </h3>
+                <ol className="mt-8 space-y-8 border-l-2 border-[#F36B12] pl-7">
+                  {authJourneyItems.map((item) => (
+                    <li key={item.date} className="relative">
+                      <span className="absolute -left-[37px] top-1 size-4 rounded-full border-2 border-[#FFF8EE] bg-[#A92B10]" />
+                      <p className="text-sm font-black text-[#F36B12]">{item.date}</p>
+                      <h4 className="mt-1 break-keep text-lg font-black text-[#33271E]">
+                        {item.title}
+                      </h4>
+                      <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                        {item.body}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            </div>
           </div>
         </section>
       ) : activeView === 'onboarding' ? (
