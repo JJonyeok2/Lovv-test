@@ -47,7 +47,7 @@ describe('MVP main entry screen', () => {
 
   it('renders the Lovv landing content from the MVP Figma frame', () => {
     seedUser()
-    seedPreference()
+    seedPreference('부산 · 오키나와')
     render(<App />)
 
     expect(screen.getByRole('banner')).toBeInTheDocument()
@@ -55,11 +55,35 @@ describe('MVP main entry screen', () => {
     expect(screen.getByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).toBeInTheDocument()
     expect(screen.getByTestId('main-entry')).toHaveClass('lovv-hero-radial')
     expect(screen.getByText('Lovv', { selector: 'span' })).toHaveClass(
+      'lovv-headline-wordmark',
       'text-[#F36B12]',
       'drop-shadow-[0_3px_0_rgba(169,43,16,0.2)]',
     )
+    ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
+      expect(screen.getByText(tag)).toBeInTheDocument()
+    })
+    expect(screen.queryByText('부산 · 오키나와 감성으로 시작합니다')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '소도시 지도 프리뷰' })).toBeInTheDocument()
+    expect(screen.getByLabelText('부산 소도시 지도 마커')).toBeInTheDocument()
+    expect(screen.getByLabelText('오키나와 소도시 지도 마커')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '빠른 이동 메뉴 열기' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveAttribute('href', '#chat')
     expect(screen.getByText('처음엔 작게, 추천은 정확하게')).toBeInTheDocument()
+  })
+
+  it('opens floating quick actions for chat and top navigation', () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '빠른 이동 메뉴 열기' }))
+
+    expect(screen.getByRole('button', { name: 'AI 일정 짜기 바로가기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '맨 위로 이동' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'AI 일정 짜기 바로가기' }))
+
+    expect(screen.getByRole('heading', { name: 'AI 일정 챗봇' })).toBeInTheDocument()
   })
 
   it('uses the logo orange palette across primary controls', () => {
@@ -97,11 +121,9 @@ describe('MVP main entry screen', () => {
       'max-sm:text-[36px]',
       'max-sm:leading-[44px]',
     )
-    expect(screen.getByText('제주 · 닛코 감성으로 시작합니다')).toHaveClass(
-      'max-w-full',
-      'break-keep',
-      'max-sm:text-[13px]',
-    )
+    ;['#제주', '#닛코', '#자연'].forEach((tag) => {
+      expect(screen.getByText(tag)).toHaveClass('max-sm:text-[13px]')
+    })
     expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveClass(
       'max-sm:w-full',
       'max-sm:min-h-[48px]',
@@ -166,7 +188,9 @@ describe('MVP main entry screen', () => {
       screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(screen.getByText('부산 · 오키나와 감성으로 시작합니다')).toBeInTheDocument()
+    ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
+      expect(screen.getByText(tag)).toBeInTheDocument()
+    })
   })
 
   it('shows and cycles the selected cover only after a preference card is clicked', () => {
@@ -207,7 +231,9 @@ describe('MVP main entry screen', () => {
     expect(
       screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByText('제주 · 닛코 감성으로 시작합니다')).toBeInTheDocument()
+    ;['#제주', '#닛코', '#자연'].forEach((tag) => {
+      expect(screen.getByText(tag)).toBeInTheDocument()
+    })
 
     fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
 
@@ -240,7 +266,9 @@ describe('MVP main entry screen', () => {
     expect(
       screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByText('부산 · 오키나와 감성으로 시작합니다')).toBeInTheDocument()
+    ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
+      expect(screen.getByText(tag)).toBeInTheDocument()
+    })
   })
 
   it('asks whether to include festivals when the chat starts', () => {

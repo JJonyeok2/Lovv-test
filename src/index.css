@@ -91,6 +91,40 @@ body {
   width: min(520px, 48vw);
 }
 
+.lovv-float-soft {
+  animation: lovv-float-soft 4.8s ease-in-out infinite alternate;
+}
+
+.lovv-headline-wordmark {
+  display: inline-block;
+  position: relative;
+}
+
+.lovv-headline-wordmark::after {
+  background: #F36B12;
+  border-radius: 9999px;
+  bottom: -6px;
+  content: "";
+  height: 5px;
+  left: 0;
+  position: absolute;
+  transform: rotate(-2deg);
+  width: 100%;
+}
+
+.lovv-mini-map {
+  background-image:
+    radial-gradient(circle at 32% 58%, rgb(243 107 18 / 0.18), transparent 18%),
+    radial-gradient(circle at 67% 38%, rgb(255 198 95 / 0.24), transparent 20%),
+    linear-gradient(90deg, rgb(243 107 18 / 0.08) 1px, transparent 1px),
+    linear-gradient(0deg, rgb(243 107 18 / 0.08) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    48px 48px,
+    48px 48px;
+}
+
 @keyframes lovv-ambient-drift {
   0% {
     background-position:
@@ -120,6 +154,16 @@ body {
   }
 }
 
+@keyframes lovv-float-soft {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
 @keyframes lovv-hero-glow-a {
   from {
     opacity: 0.72;
@@ -146,6 +190,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .lovv-ambient-background,
+  .lovv-float-soft,
   .lovv-hero-radial::before,
   .lovv-hero-radial::after {
     animation: none;

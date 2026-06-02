@@ -362,6 +362,16 @@ const createInitialChatMessages = (preference: Preference): ChatMessage[] => [
 const createAssistantReply = (preference: Preference, draft: PlanDraft) =>
   `${preference.cityPair} 감성으로 ${draft.durationLabel} 흐름을 잡아볼게요. ${draft.intensityLabel}으로 ${preference.tag} 취향이 가장 잘 보이는 시간대를 먼저 배치했습니다.`
 
+const mapMarkerPositions = [
+  { left: '32%', top: '58%' },
+  { left: '67%', top: '38%' },
+]
+
+const getThemeHashtags = (preference: Preference) => [
+  ...preference.coverImages.map((coverImage) => `#${coverImage.city.replace('/', '')}`),
+  `#${preference.tag.split('·')[0]}`,
+]
+
 function App() {
   const proofItems = ['AI 일정', '챗봇', '소도시 보기']
   const [, setCurrentUser] = useState<LovvUser | null>(() => readStoredUser())
@@ -377,12 +387,14 @@ function App() {
   const [hasSelectedCover, setHasSelectedCover] = useState(false)
   const [festivalThemeChoice, setFestivalThemeChoice] = useState<FestivalThemeChoice>('undecided')
   const [chatInput, setChatInput] = useState('')
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
     createInitialChatMessages(selectedPreference),
   )
   const [planDraft, setPlanDraft] = useState<PlanDraft>(() => createPlanDraft(selectedPreference))
   const selectedCoverImage =
     selectedPreference.coverImages[coverImageIndex] ?? selectedPreference.coverImages[0]
+  const selectedThemeHashtags = getThemeHashtags(selectedPreference)
 
   const signInWithGoogle = () => {
     localStorage.setItem(authStorageKey, JSON.stringify(mockGoogleUser))
@@ -408,6 +420,17 @@ function App() {
     setChatMessages(createInitialChatMessages(selectedPreference))
     setPlanDraft(createPlanDraft(selectedPreference))
     setActiveView('chat')
+  }
+
+  const openChatFromQuickAction = () => {
+    setIsQuickActionsOpen(false)
+    openChat()
+  }
+
+  const scrollToTop = () => {
+    setIsQuickActionsOpen(false)
+    setActiveView('home')
+    window.scrollTo?.({ behavior: 'smooth', top: 0 })
   }
 
   const storeSelectedPreference = () => {
@@ -726,14 +749,21 @@ function App() {
                     <span className="block">나만 아는</span>
                     <span className="block">
                       여행 앱,{' '}
-                      <span className="text-[#F36B12] drop-shadow-[0_3px_0_rgba(169,43,16,0.2)]">
+                      <span className="lovv-headline-wordmark text-[#F36B12] drop-shadow-[0_3px_0_rgba(169,43,16,0.2)]">
                         Lovv
                       </span>
                     </span>
                   </h1>
-                  <p className="mt-7 inline-flex max-w-full min-h-[36px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-5 py-2 break-keep text-center text-sm font-semibold leading-5 text-[#33271E] max-sm:text-[13px]">
-                    {selectedPreference.cityPair} 감성으로 시작합니다
-                  </p>
+                  <div aria-label="선택한 여행 테마" className="mt-7 flex max-w-full flex-wrap gap-2">
+                    {selectedThemeHashtags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 break-keep text-sm font-bold leading-5 text-[#33271E] shadow-[0_10px_24px_-18px_rgba(51,39,30,0.28)] max-sm:text-[13px]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                   <p className="mt-8 max-w-[600px] break-keep text-lg leading-[31px] text-[#33271E] max-sm:mt-7 max-sm:text-base max-sm:leading-7">
                     여행 조건을 길게 입력하지 않아도 괜찮아요. <br />
                     한국과 일본의 작은 도시를 기준으로 취향에 맞는 여행 흐름을 먼저 제안합니다.
@@ -747,12 +777,87 @@ function App() {
                   </a>
                 </div>
 
-                <div className="-mt-2.5 justify-self-end max-lg:mt-0 max-lg:justify-self-start">
+                <div className="lovv-float-soft -mt-2.5 justify-self-end max-lg:mt-0 max-lg:justify-self-start">
                   <img
                     src={suitcaseImage}
                     alt="손을 흔드는 오렌지색 캐리어 캐릭터"
                     className="h-[531px] w-[430px] object-contain max-sm:h-auto max-sm:w-full"
                   />
+                </div>
+              </section>
+
+              <section
+                aria-labelledby="small-city-map-title"
+                className="mx-auto max-w-[1440px] px-[55px] pb-8 max-sm:px-5"
+              >
+                <div className="grid min-h-[320px] grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-6 rounded-3xl border border-[#F3B489] bg-white/80 p-6 shadow-[0_18px_50px_-34px_rgba(51,39,30,0.24)] max-lg:grid-cols-1">
+                  <div className="flex min-w-0 flex-col justify-between gap-6">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#F36B12]">
+                        Small city route
+                      </p>
+                      <h2
+                        id="small-city-map-title"
+                        className="mt-3 break-keep text-[28px] font-bold leading-9 text-[#33271E] max-sm:text-2xl max-sm:leading-8"
+                      >
+                        소도시 지도 프리뷰
+                      </h2>
+                      <p className="mt-3 break-keep text-sm leading-6 text-[#33271E]">
+                        선택한 테마와 가까운 도시를 먼저 지도 위에 표시하고, AI 일정은 이 후보를 기준으로 대화를 시작합니다.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPreference.coverImages.map((coverImage) => (
+                        <span
+                          key={coverImage.city}
+                          className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold text-[#33271E]"
+                        >
+                          {coverImage.city}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div
+                    aria-label="선택한 소도시 지도"
+                    className="lovv-mini-map relative min-h-[280px] overflow-hidden rounded-[26px] border border-[#F3B489] bg-[#FFF0E4]"
+                  >
+                    <div className="absolute inset-0 opacity-70">
+                      <div className="absolute left-[10%] top-[18%] h-[64%] w-[32%] rounded-[55%] border border-[#F3B489]" />
+                      <div className="absolute right-[8%] top-[14%] h-[70%] w-[38%] rounded-[55%] border border-[#F3B489]" />
+                      <div className="absolute left-[42%] top-[24%] h-[58%] w-[20%] rotate-12 rounded-[50%] border border-[#F3B489]" />
+                    </div>
+                    <svg
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d="M32 58 C45 40, 52 52, 67 38"
+                        fill="none"
+                        stroke="#F36B12"
+                        strokeDasharray="4 4"
+                        strokeLinecap="round"
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                    {selectedPreference.coverImages.map((coverImage, index) => (
+                      <button
+                        key={coverImage.city}
+                        type="button"
+                        aria-label={`${coverImage.city} 소도시 지도 마커`}
+                        style={mapMarkerPositions[index]}
+                        className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-[#A92B10] bg-white px-3 py-2 text-[12px] font-black text-[#33271E] shadow-[0_12px_30px_-18px_rgba(51,39,30,0.5)] transition hover:scale-[1.03] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                      >
+                        <span className="size-2 rounded-full bg-[#F36B12]" />
+                        {coverImage.city}
+                      </button>
+                    ))}
+                    <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-[#F3B489] bg-white/90 px-4 py-3 text-[12px] font-bold leading-5 text-[#33271E] shadow-[0_12px_30px_-24px_rgba(51,39,30,0.45)]">
+                      {selectedPreference.tag} 테마 후보를 먼저 띄워두고, 일정 대화에서 기간과 축제 포함 여부를 좁혀갑니다.
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -783,6 +888,38 @@ function App() {
                   </ul>
                 </div>
               </section>
+
+              <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3 max-sm:bottom-4 max-sm:right-4">
+                {isQuickActionsOpen ? (
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      type="button"
+                      aria-label="AI 일정 짜기 바로가기"
+                      onClick={openChatFromQuickAction}
+                      className="inline-flex min-h-11 items-center rounded-full border border-[#A92B10] bg-[#F36B12] px-5 text-sm font-black text-[#33271E] shadow-[0_16px_36px_-20px_rgba(51,39,30,0.55)] transition hover:-translate-y-0.5 hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                    >
+                      AI 일정 짜기
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="맨 위로 이동"
+                      onClick={scrollToTop}
+                      className="inline-flex min-h-11 items-center rounded-full border border-[#F3B489] bg-white px-5 text-sm font-black text-[#33271E] shadow-[0_16px_36px_-22px_rgba(51,39,30,0.45)] transition hover:-translate-y-0.5 hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                    >
+                      맨 위로
+                    </button>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={isQuickActionsOpen ? '빠른 이동 메뉴 닫기' : '빠른 이동 메뉴 열기'}
+                  aria-expanded={isQuickActionsOpen}
+                  onClick={() => setIsQuickActionsOpen((isOpen) => !isOpen)}
+                  className="flex size-14 items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] text-xl font-black text-[#33271E] shadow-[0_18px_42px_-20px_rgba(51,39,30,0.65)] transition hover:-translate-y-0.5 hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                >
+                  {isQuickActionsOpen ? '×' : '↥'}
+                </button>
+              </div>
             </>
           ) : (
             <section
