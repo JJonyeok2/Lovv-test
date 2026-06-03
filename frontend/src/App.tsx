@@ -1531,7 +1531,7 @@ function App() {
                 id="home"
                 data-testid="main-entry"
                 aria-labelledby="main-entry-title"
-                className="lovv-hero-radial mx-auto grid min-h-[660px] max-w-[1440px] grid-cols-[minmax(0,1fr)_430px] items-start gap-16 px-[77px] pt-[132px] max-lg:grid-cols-1 max-lg:px-8 max-lg:pt-28 max-sm:px-5"
+                className="lovv-hero-radial mx-auto grid min-h-[732px] max-w-[1440px] grid-cols-[minmax(0,1fr)_430px] items-start gap-20 px-[77px] pt-[145px] max-lg:grid-cols-1 max-lg:px-8 max-lg:pt-28 max-sm:px-5"
               >
                 <div className="max-w-[620px]">
                   <p className="break-keep text-base font-semibold leading-[22px] text-[#33271E] max-sm:text-sm max-sm:leading-5">
@@ -1571,35 +1571,6 @@ function App() {
                   >
                     AI 일정 짜기
                   </a>
-                  <div
-                    role="region"
-                    aria-label="랜딩 빠른 액션"
-                    className="mt-6 grid max-w-[560px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[22px] border border-[#F3B489] bg-[#fffffa]/88 p-4 shadow-[0_20px_52px_-34px_rgba(51,39,30,0.35)] backdrop-blur max-sm:grid-cols-1"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#A92B10]">
-                        Next action
-                      </p>
-                      <p className="mt-2 break-keep text-sm font-semibold leading-6 text-[#33271E]">
-                        선택한 테마로 대화를 시작하거나, 지도에서 먼저 후보 도시를 확인해보세요.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2 max-sm:grid max-sm:grid-cols-2">
-                      <a
-                        href="#chat"
-                        onClick={openChat}
-                        className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-4 text-center text-[12px] font-black leading-4 text-[#33271E] transition hover:-translate-y-0.5 hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                      >
-                        대화 시작
-                      </a>
-                      <a
-                        href="#small-city-map"
-                        className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#F3B489] bg-white px-4 text-center text-[12px] font-black leading-4 text-[#33271E] transition hover:-translate-y-0.5 hover:border-[#F36B12] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                      >
-                        지도 보기
-                      </a>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="lovv-float-soft -mt-2.5 justify-self-end max-lg:mt-0 max-lg:justify-self-start">

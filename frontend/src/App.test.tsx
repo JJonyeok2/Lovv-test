@@ -89,17 +89,7 @@ describe('MVP main entry screen', () => {
       expect(screen.getByText(tag)).toBeInTheDocument()
     })
     expect(screen.queryByText('부산 · 오키나와 감성으로 시작합니다')).not.toBeInTheDocument()
-    const landingActions = screen.getByRole('region', { name: '랜딩 빠른 액션' })
-
-    expect(within(landingActions).getByText('Next action')).toBeInTheDocument()
-    expect(
-      within(landingActions).getByText('선택한 테마로 대화를 시작하거나, 지도에서 먼저 후보 도시를 확인해보세요.'),
-    ).toBeInTheDocument()
-    expect(within(landingActions).getByRole('link', { name: '대화 시작' })).toHaveAttribute('href', '#chat')
-    expect(within(landingActions).getByRole('link', { name: '지도 보기' })).toHaveAttribute(
-      'href',
-      '#small-city-map',
-    )
+    expect(screen.queryByText('Next action')).not.toBeInTheDocument()
     const proofHeading = screen.getByText('처음엔 작게, 추천은 정확하게')
     const mapHeading = screen.getByRole('heading', { name: '소도시 지도 프리뷰' })
 
