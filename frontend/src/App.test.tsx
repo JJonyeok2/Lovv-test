@@ -107,7 +107,7 @@ describe('MVP main entry screen', () => {
     expect(screen.queryByRole('button', { name: '마이페이지' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '현재 세션: Google mock 메뉴 열기' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
     expect(screen.getByTestId('main-entry')).toHaveClass('lovv-rotating-hero')
     expect(screen.getByTestId('main-entry')).toHaveClass('min-h-[820px]')
     expect(screen.getByTestId('main-entry').querySelector('.lovv-hero-tone-bridge')).toBeInTheDocument()
@@ -193,7 +193,7 @@ describe('MVP main entry screen', () => {
     seedPreference('부산 · 오키나와')
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
     expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'false')
     expect(screen.getByTestId('hero-theme-sea')).toHaveAttribute('aria-hidden', 'true')
 
@@ -201,7 +201,7 @@ describe('MVP main entry screen', () => {
       vi.advanceTimersByTime(10000)
     })
 
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 푸른 바다' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 푸른 바다' })).toBeInTheDocument()
     expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByTestId('hero-theme-sea')).toHaveAttribute('aria-hidden', 'false')
     expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-sea')
@@ -210,8 +210,12 @@ describe('MVP main entry screen', () => {
       vi.advanceTimersByTime(10000)
     })
 
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 화려한 축제' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 화려한 축제' })).toBeInTheDocument()
     expect(screen.getByTestId('hero-theme-festival')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-theme-festival').querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('firework'),
+    )
     expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-festival-gradient')
   })
 
@@ -418,7 +422,7 @@ describe('MVP main entry screen', () => {
     seedPreference('제주 · 닛코')
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toHaveClass(
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 숨은 매력' })).toHaveClass(
       'break-keep',
       'max-sm:text-[36px]',
     )
@@ -493,6 +497,14 @@ describe('MVP main entry screen', () => {
     ].forEach((copy) => {
       expect(screen.getByText(new RegExp(copy.replace('/', '\\/')))).toBeInTheDocument()
     })
+    expect(screen.getByTestId('onboarding-content-grid')).toHaveClass('mt-10', 'items-stretch')
+    expect(screen.getByTestId('preference-card-grid')).toHaveClass('auto-rows-[212px]')
+    expect(screen.getByText('온양온천 · 스파 휴양 · 지옥 순례')).toHaveClass(
+      'mt-auto',
+      'w-full',
+      'border-t',
+      'shrink-0',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: /부산 · 오키나와/ }))
     fireEvent.click(screen.getByRole('button', { name: '이 취향으로 Lovv 시작하기' }))
@@ -518,6 +530,11 @@ describe('MVP main entry screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /아산\/온양 · 벳푸/ }))
 
     expect(screen.getByRole('button', { name: /아산\/온양 · 벳푸/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('preference-preview-card')).toHaveClass(
+      'top-[220px]',
+      'h-fit',
+      'max-xl:static',
+    )
     expect(screen.getByRole('img', { name: '아산/온양 대표 이미지' })).toBeInTheDocument()
     expect(screen.getByText('현재 표시: 아산/온양')).toBeInTheDocument()
 
@@ -572,7 +589,7 @@ describe('MVP main entry screen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '← 이전으로 돌아가기' }))
 
-    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'AI 일정 챗봇' })).not.toBeInTheDocument()
   })
 

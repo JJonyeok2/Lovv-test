@@ -3,6 +3,7 @@ import logoImage from './assets/lovv-logo.png'
 import foxFaceImage from './assets/foxhead-smile.png'
 import beppuImage from './assets/cities/beppu.jpg'
 import busanImage from './assets/cities/busan.jpg'
+import fireworkImage from './assets/cities/firework.jpg'
 import gangneungImage from './assets/cities/gangneung.jpg'
 import gyeongjuImage from './assets/cities/gyeongju.jpg'
 import jejuImage from './assets/cities/jeju.jpg'
@@ -133,7 +134,7 @@ const heroThemes: HeroTheme[] = [
   {
     id: 'mountain',
     label: 'Mountain',
-    lead: '당신만 몰랐던',
+    lead: '당신이 몰랐던',
     accent: '소도시의 숨은 매력',
     summary:
       '복잡한 도심을 벗어나 현지인의 숨결이 닿은 산과 오래된 마을로 초대합니다. Lovv가 제안하는 느린 여행을 시작해보세요.',
@@ -144,7 +145,7 @@ const heroThemes: HeroTheme[] = [
   {
     id: 'sea',
     label: 'Sea',
-    lead: '당신만 몰랐던',
+    lead: '당신이 몰랐던',
     accent: '소도시의 푸른 바다',
     summary:
       '탁 트인 바다와 청량한 바람이 머무는 곳. Lovv와 함께 파도 소리에 맞춰 걷는 특별한 여정을 찾아보세요.',
@@ -155,11 +156,11 @@ const heroThemes: HeroTheme[] = [
   {
     id: 'festival',
     label: 'Festival',
-    lead: '당신만 몰랐던',
+    lead: '당신이 몰랐던',
     accent: '소도시의 화려한 축제',
     summary:
       '밤하늘의 빛, 골목의 음악, 지역의 계절감이 만나는 순간. 축제의 에너지를 담은 소도시 여정을 제안합니다.',
-    backgroundImage: osakaImage,
+    backgroundImage: fireworkImage,
     accentClassName: 'lovv-text-festival-gradient',
     glowClassName: 'lovv-hero-glow-festival',
   },
@@ -1936,17 +1937,18 @@ function App() {
           aria-labelledby="onboarding-title"
           className="mx-auto min-h-dvh max-w-[1440px] px-12 py-9 max-lg:px-8 max-sm:px-5"
         >
-          <div
-            className={`grid min-h-[calc(100dvh-72px)] gap-10 max-xl:grid-cols-1 ${
-              hasSelectedCover ? 'grid-cols-[minmax(0,1fr)_420px]' : 'grid-cols-1'
-            }`}
-          >
-            <div>
-              <div className="flex items-center justify-between gap-4">
-                <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-contain" />
-              </div>
+          <div className="min-h-[calc(100dvh-72px)]">
+            <div className="flex items-center justify-between gap-4">
+              <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-contain" />
+            </div>
 
-              <div className="mt-10">
+            <div
+              data-testid="onboarding-content-grid"
+              className={`mt-10 grid items-stretch gap-10 max-xl:grid-cols-1 ${
+                hasSelectedCover ? 'grid-cols-[minmax(0,1fr)_420px]' : 'grid-cols-1'
+              }`}
+            >
+              <div className="min-w-0">
                 <div className="min-w-0">
                   <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#33271E]">
                     Lovv City Mood Journal
@@ -1963,7 +1965,6 @@ function App() {
                       : '익숙한 대도시 감각을 Lovv가 한국과 일본 소도시 후보로 바꿔둘게요.'}
                   </p>
                 </div>
-              </div>
 
               <section className="mt-9">
                 <div className="flex items-end justify-between gap-5 max-md:block">
@@ -1975,7 +1976,10 @@ function App() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+                <div
+                  data-testid="preference-card-grid"
+                  className="mt-5 grid auto-rows-[212px] grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:auto-rows-auto max-md:grid-cols-1"
+                >
                   {preferences.map((preference) => {
                     const isSelected = hasSelectedCover && preferenceSelection.cityPair === preference.cityPair
 
@@ -1985,13 +1989,13 @@ function App() {
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() => selectPreference(preference)}
-                        className={`flex min-h-[176px] min-w-0 flex-col justify-between rounded-[22px] border p-5 text-left transition hover:-translate-y-0.5 hover:border-[#A92B10] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                        className={`flex h-full min-w-0 flex-col overflow-hidden rounded-[22px] border p-5 text-left transition hover:-translate-y-0.5 hover:border-[#A92B10] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-md:min-h-[212px] ${
                           isSelected
                             ? 'border-[#A92B10] bg-[#FFF0E4] shadow-[0_18px_40px_-28px_rgba(51,39,30,0.55)]'
                             : 'border-[#F3B489] bg-[#fffffa]'
                         }`}
                       >
-                        <span className="flex items-center justify-between gap-3">
+                        <span className="flex shrink-0 items-center justify-between gap-3">
                           <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#33271E]">
                             {preference.issue}
                           </span>
@@ -2001,7 +2005,7 @@ function App() {
                             {preference.tag}
                           </span>
                         </span>
-                        <span className="mt-5">
+                        <span className="mt-5 min-h-0">
                           <span className="block break-keep text-[23px] font-bold leading-8 text-[#33271E] max-sm:text-xl max-sm:leading-7">
                             {preference.cityPair}
                           </span>
@@ -2009,7 +2013,7 @@ function App() {
                             {preference.description}
                           </span>
                         </span>
-                        <span className="mt-5 block line-clamp-2 break-keep border-t border-[#F3B489] pt-3 text-[12px] font-semibold leading-5 text-[#33271E]">
+                        <span className="mt-auto block w-full shrink-0 line-clamp-2 break-keep border-t border-[#F3B489] pt-3 text-[12px] font-semibold leading-5 text-[#33271E]">
                           {preference.routeHint}
                         </span>
                       </button>
@@ -2053,7 +2057,10 @@ function App() {
             </div>
 
             {hasSelectedCover ? (
-              <aside className="sticky top-9 h-fit rounded-[28px] border border-[#F3B489] bg-[#fffffa] p-5 shadow-[0_24px_70px_-42px_rgba(51,39,30,0.45)] max-xl:static">
+              <aside
+                data-testid="preference-preview-card"
+                className="sticky top-[220px] h-fit rounded-[28px] border border-[#F3B489] bg-[#fffffa] p-5 shadow-[0_24px_70px_-42px_rgba(51,39,30,0.45)] max-xl:static"
+              >
                 <div className="group relative overflow-hidden rounded-[24px] border border-[#F3B489] bg-[#FFF0E4]">
                   <div className="absolute left-5 right-5 top-5 z-10 flex items-center justify-between gap-3">
                     <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#33271E]">
@@ -2109,6 +2116,7 @@ function App() {
                 </div>
               </aside>
             ) : null}
+          </div>
           </div>
         </section>
       ) : (
