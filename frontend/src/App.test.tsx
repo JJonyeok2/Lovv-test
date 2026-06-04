@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 const authStorageKey = 'lovv.auth.user'
@@ -21,6 +21,30 @@ const seedPreference = (cityPair = '아산/온양 · 벳푸') => {
   localStorage.setItem('lovv.preference', JSON.stringify({ cityPair }))
 }
 
+const openSessionMenu = () => {
+  const sessionMenuButton = screen.getByRole('button', {
+    name: '현재 세션: Google mock 메뉴 열기',
+  })
+
+  fireEvent.click(sessionMenuButton)
+
+  return sessionMenuButton
+}
+
+const openMyPageFromSessionMenu = () => {
+  openSessionMenu()
+  fireEvent.click(screen.getByRole('menuitem', { name: '마이페이지' }))
+}
+
+const signOutFromSessionMenu = () => {
+  openSessionMenu()
+  fireEvent.click(screen.getByRole('menuitem', { name: '로그아웃' }))
+}
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('MVP main entry screen', () => {
   it('shows social mock signup before onboarding on first entry', () => {
     render(<App />)
@@ -34,12 +58,16 @@ describe('MVP main entry screen', () => {
     expect(screen.queryByText('MVP mock session')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' })).not.toBeInTheDocument()
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
     expect(screen.queryByText('Next step')).not.toBeInTheDocument()
     expect(screen.queryByText(/회원가입 후 여행의 분위기/)).not.toBeInTheDocument()
     expect(screen.getByTestId('auth-fixed-panel')).toHaveClass('border-r')
+    expect(screen.getByTestId('auth-fixed-panel')).toHaveClass('lovv-auth-left-panel')
     expect(screen.getByTestId('auth-scroll-panel')).toHaveClass('overflow-y-auto')
+    expect(screen.getByTestId('auth-scroll-panel')).toHaveClass('lovv-auth-story-panel')
     expect(screen.queryByRole('img', { name: '손을 흔드는 오렌지색 캐리어 캐릭터' })).not.toBeInTheDocument()
     expect(screen.getByText('지금은 이곳')).toHaveClass('text-[#F36B12]')
+    expect(screen.getByRole('link', { name: '문의하기' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '소도시 여행의 새로운 기준, Lovv' })).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Lovv 서비스 설명' })).toHaveStyle({
       listStyleType: 'square',
@@ -76,32 +104,155 @@ describe('MVP main entry screen', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument()
     expect(screen.queryByText('Lovv Google User')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '새 여정 만들기' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '마이페이지' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).toBeInTheDocument()
-    expect(screen.getByTestId('main-entry')).toHaveClass('lovv-hero-radial')
-    expect(screen.getByText('Lovv', { selector: 'span' })).toHaveClass(
-      'lovv-headline-wordmark',
-      'text-[#F36B12]',
-      'drop-shadow-[0_3px_0_rgba(169,43,16,0.2)]',
-    )
+    expect(screen.queryByRole('button', { name: '마이페이지' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '현재 세션: Google mock 메뉴 열기' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
+    expect(screen.getByTestId('main-entry')).toHaveClass('lovv-rotating-hero')
+    expect(screen.getByTestId('main-entry')).toHaveClass('min-h-[820px]')
+    expect(screen.getByTestId('main-entry').querySelector('.lovv-hero-tone-bridge')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-mountain')
     ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
-      expect(screen.getByText(tag)).toBeInTheDocument()
+      expect(screen.getAllByText(tag).length).toBeGreaterThan(0)
     })
     expect(screen.queryByText('부산 · 오키나와 감성으로 시작합니다')).not.toBeInTheDocument()
     expect(screen.queryByText('Next action')).not.toBeInTheDocument()
-    const proofHeading = screen.getByText('처음엔 작게, 추천은 정확하게')
-    const mapHeading = screen.getByRole('heading', { name: '소도시 지도 프리뷰' })
+    const proofHeading = screen.getByText('처음엔 작게, 추천은 명확하게')
+    const proofSummaryPanel = screen.getByTestId('proof-summary-panel')
+    const recommendationBasis = screen.getByRole('list', { name: '추천 근거 해시태그' })
+    const monthlyHeading = screen.getByRole('heading', { name: '이번 달 추천 소도시' })
 
-    expect(mapHeading).toBeInTheDocument()
-    expect(Boolean(proofHeading.compareDocumentPosition(mapHeading) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+    expect(proofSummaryPanel).toHaveClass('border')
+    expect(proofSummaryPanel).toHaveClass('border-[#F3B489]')
+    expect(screen.getByText(/선택한 기준 테마를 먼저 보고/)).toBeInTheDocument()
+    expect(within(recommendationBasis).getAllByRole('listitem')).toHaveLength(2)
+    ;['#바다', '#해안'].forEach((tag) => {
+      expect(within(recommendationBasis).getByText(tag)).toBeInTheDocument()
+    })
+    ;['#바다해안', '#바다+2', '#리조트+1', '#산악트레킹약함'].forEach((tag) => {
+      expect(within(recommendationBasis).queryByText(tag)).not.toBeInTheDocument()
+    })
+    expect(screen.queryByRole('link', { name: 'AI 일정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '챗봇' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '소도시 보기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '소도시 지도 프리뷰' })).not.toBeInTheDocument()
+    expect(screen.queryByText('이번 주 추천 소도시')).not.toBeInTheDocument()
+    expect(monthlyHeading).toBeInTheDocument()
+    expect(Boolean(proofHeading.compareDocumentPosition(monthlyHeading) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
       true,
     )
-    expect(screen.getByLabelText('부산 소도시 지도 마커')).toBeInTheDocument()
-    expect(screen.getByLabelText('오키나와 소도시 지도 마커')).toBeInTheDocument()
+    const monthlyGrid = screen.getByTestId('monthly-recommendation-grid')
+
+    expect(monthlyGrid).toHaveClass('grid-cols-4')
+    expect(within(monthlyGrid).getAllByRole('button')).toHaveLength(5)
+    ;[
+      '아산/온양 · 벳푸 이달 추천 상세 보기',
+      '부산 · 오키나와 이달 추천 상세 보기',
+      '경주 · 교토 이달 추천 상세 보기',
+      '전주 · 오사카 이달 추천 상세 보기',
+      '강릉 · 가나자와 이달 추천 상세 보기',
+    ].forEach((buttonName) => {
+      expect(within(monthlyGrid).getByRole('button', { name: buttonName })).toBeInTheDocument()
+    })
     expect(screen.getByRole('button', { name: '빠른 이동 메뉴 열기' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '여행지 찾아보기' })).toHaveAttribute(
+      'href',
+      '#monthly-recommendations',
+    )
     expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveAttribute('href', '#chat')
-    expect(screen.getByText('처음엔 작게, 추천은 정확하게')).toBeInTheDocument()
+    expect(screen.getByText('처음엔 작게, 추천은 명확하게')).toBeInTheDocument()
+  })
+
+  it('opens monthly recommendation detail before starting the planner', () => {
+    seedUser()
+    seedPreference('아산/온양 · 벳푸')
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: '부산 · 오키나와 이달 추천 상세 보기' }))
+
+    expect(localStorage.getItem('lovv.preference')).toContain('아산/온양 · 벳푸')
+    expect(screen.getByRole('heading', { name: '바다색이 선명한 해안 휴식' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '이 테마를 추천하는 기준' })).toBeInTheDocument()
+    expect(screen.getByText('부산 · 오키나와')).toBeInTheDocument()
+    expect(screen.getByText('해운대 · 광안리 · 에메랄드 바다')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'AI 일정 챗봇' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '이 테마로 일정 계획하기' }))
+
+    expect(localStorage.getItem('lovv.preference')).toContain('부산 · 오키나와')
+    expect(screen.getByRole('heading', { name: 'AI 일정 챗봇' })).toBeInTheDocument()
+    expect(screen.getByText(/부산 · 오키나와 감성을 기준으로/)).toBeInTheDocument()
+    expect(screen.getByRole('log', { name: 'AI 일정 대화' })).toHaveTextContent('부산 · 오키나와 감성')
+    expect(screen.queryByRole('heading', { name: '소도시 지도 프리뷰' })).not.toBeInTheDocument()
+  })
+
+  it('rotates the main hero theme every 10 seconds with theme-specific slogan styling', () => {
+    vi.useFakeTimers()
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
+    expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-theme-sea')).toHaveAttribute('aria-hidden', 'true')
+
+    act(() => {
+      vi.advanceTimersByTime(10000)
+    })
+
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 푸른 바다' })).toBeInTheDocument()
+    expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByTestId('hero-theme-sea')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-sea')
+
+    act(() => {
+      vi.advanceTimersByTime(10000)
+    })
+
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 화려한 축제' })).toBeInTheDocument()
+    expect(screen.getByTestId('hero-theme-festival')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-festival-gradient')
+  })
+
+  it('renders the refreshed product shell with a minimal session header and footer', () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    const banner = screen.getByRole('banner')
+    expect(within(banner).queryByRole('navigation', { name: 'Lovv 주요 내비게이션' })).not.toBeInTheDocument()
+    expect(within(banner).queryByRole('button', { name: '여행지' })).not.toBeInTheDocument()
+    expect(within(banner).queryByRole('button', { name: '일정 짜기' })).not.toBeInTheDocument()
+    expect(within(banner).queryByRole('button', { name: '커뮤니티' })).not.toBeInTheDocument()
+    expect(within(banner).queryByRole('button', { name: '소도시 검색 열기' })).not.toBeInTheDocument()
+    expect(within(banner).queryByRole('button', { name: '마이페이지' })).not.toBeInTheDocument()
+    const sessionMenuButton = within(banner).getByRole('button', {
+      name: '현재 세션: Google mock 메뉴 열기',
+    })
+
+    expect(sessionMenuButton).toHaveTextContent('G')
+    expect(sessionMenuButton).toHaveAttribute('aria-expanded', 'false')
+    expect(within(banner).queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument()
+
+    fireEvent.click(sessionMenuButton)
+
+    expect(sessionMenuButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('menu', { name: '세션 메뉴' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '마이페이지' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: '로그아웃' })).toBeInTheDocument()
+
+    const footer = screen.getByRole('contentinfo')
+
+    expect(within(footer).getByText('Lovv')).toBeInTheDocument()
+    expect(within(footer).getByText('© 2026 Lovv. All rights reserved.')).toBeInTheDocument()
+    expect(within(footer).getByRole('link', { name: '이용약관' })).toBeInTheDocument()
+    expect(within(footer).getByRole('link', { name: '개인정보처리방침' })).toBeInTheDocument()
+    expect(within(footer).getByRole('link', { name: '문의하기' })).toBeInTheDocument()
+    expect(within(footer).queryByRole('button', { name: 'Lovv Instagram 열기' })).not.toBeInTheDocument()
+    expect(within(footer).queryByRole('button', { name: 'Lovv YouTube 열기' })).not.toBeInTheDocument()
+    expect(within(footer).queryByRole('button', { name: 'Lovv Blog 열기' })).not.toBeInTheDocument()
+    expect(within(footer).queryByLabelText('Lovv social links')).not.toBeInTheDocument()
   })
 
   it('opens My Page from the header while keeping logout available', () => {
@@ -111,14 +262,14 @@ describe('MVP main entry screen', () => {
 
     expect(screen.queryByRole('link', { name: '새 여정 만들기' })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '마이페이지' }))
+    openMyPageFromSessionMenu()
 
     expect(screen.getByRole('heading', { name: '마이페이지' })).toBeInTheDocument()
     expect(screen.getByText('Google mock')).toBeInTheDocument()
     expect(screen.getByText('경주 · 교토')).toBeInTheDocument()
     expect(screen.getByText(/API 호출 없이 더미 사용자만 저장 중입니다/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '취향 다시 고르기' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: '로그아웃' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: '로그아웃' })).toHaveLength(1)
     expect(screen.getByRole('button', { name: '메인으로 돌아가기' })).toBeInTheDocument()
   })
 
@@ -127,7 +278,7 @@ describe('MVP main entry screen', () => {
     seedPreference('경주 · 교토')
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '마이페이지' }))
+    openMyPageFromSessionMenu()
     fireEvent.click(screen.getByRole('button', { name: '취향 다시 고르기' }))
 
     expect(screen.getByRole('heading', { name: '여행의 분위기를 다시 골라주세요' })).toBeInTheDocument()
@@ -152,7 +303,7 @@ describe('MVP main entry screen', () => {
     seedPreference('경주 · 교토')
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '마이페이지' }))
+    openMyPageFromSessionMenu()
     fireEvent.click(screen.getByRole('button', { name: '취향 다시 고르기' }))
     fireEvent.click(screen.getByRole('button', { name: /부산 · 오키나와/ }))
     fireEvent.click(screen.getByRole('button', { name: '이 취향으로 저장하기' }))
@@ -170,7 +321,7 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText('오키나와')).toBeInTheDocument()
   })
 
-  it('shows compact planner summary cards and updates schedule status after choices', () => {
+  it('shows planner state header and updates schedule status after choices', () => {
     seedUser()
     seedPreference('제주 · 닛코')
     render(<App />)
@@ -179,15 +330,19 @@ describe('MVP main entry screen', () => {
 
     const summary = screen.getByTestId('chat-planner-summary')
 
-    expect(within(summary).getByText('취향 반영 완료')).toBeInTheDocument()
+    expect(summary).toHaveClass('rounded-[18px]')
+    expect(summary.querySelector('ol')).toHaveClass('grid-cols-3')
+    expect(within(summary).getByText('취향 반영')).toBeInTheDocument()
+    expect(within(summary).getByText('완료')).toBeInTheDocument()
     expect(within(summary).getByText('제주 · 닛코 감성으로 시작합니다.')).toBeInTheDocument()
     expect(within(summary).getByText('#자연')).toBeInTheDocument()
-    expect(within(summary).getByText('소도시 후보 탐색')).toBeInTheDocument()
+    expect(within(summary).getByText('후보 탐색')).toBeInTheDocument()
+    expect(within(summary).getByText('진행 중')).toBeInTheDocument()
     expect(within(summary).getByText('제주')).toBeInTheDocument()
     expect(within(summary).getByText('닛코')).toBeInTheDocument()
-    expect(within(summary).getByText('일정 초안 구성')).toBeInTheDocument()
+    expect(within(summary).getByText('일정 구성')).toBeInTheDocument()
     expect(within(summary).getByText('기간과 축제 여부를 고르면 초안이 완성됩니다.')).toBeInTheDocument()
-    expect(within(summary).getByText('대기중')).toBeInTheDocument()
+    expect(within(summary).getByText('대기')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '축제 제외' }))
     fireEvent.click(screen.getByRole('button', { name: '1박 2일' }))
@@ -216,18 +371,34 @@ describe('MVP main entry screen', () => {
     seedPreference()
     render(<App />)
 
-    expect(screen.getByRole('button', { name: '마이페이지' })).toHaveClass('bg-[#F36B12]')
+    expect(screen.getByRole('button', { name: '현재 세션: Google mock 메뉴 열기' })).toHaveClass('bg-[#F36B12]')
+    expect(screen.getByRole('link', { name: '여행지 찾아보기' })).toHaveClass(
+      'bg-[#B64A00]',
+      'border-[#A92B10]',
+      'text-white',
+      'hover:bg-[#F36B12]',
+    )
+    expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveClass(
+      'bg-white/90',
+      'text-[#B64A00]',
+      'hover:bg-[#FFF0E4]',
+    )
 
-    const buttonLabels = ['AI 일정 짜기', 'AI 일정', '챗봇', '소도시 보기']
+    const recommendationBasis = screen.getByRole('list', { name: '추천 근거 해시태그' })
 
-    buttonLabels.forEach((label) => {
-      const button = screen.getByRole('link', { name: label })
-
-      expect(button).toHaveClass('bg-[#F36B12]')
-      expect(button).toHaveClass('border-[#A92B10]')
-      expect(button).toHaveClass('text-[#33271E]')
-      expect(button).toHaveClass('hover:bg-[#FF8A2A]')
-    })
+    expect(within(recommendationBasis).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(recommendationBasis).getByText('#온천')).toHaveClass(
+      'rounded-[5px]',
+      'bg-[#F36B12]',
+      'border-[#A92B10]',
+    )
+    expect(within(recommendationBasis).getByText('#온천')).not.toHaveClass('rounded-full')
+    expect(within(recommendationBasis).getByText('#휴양')).toHaveClass(
+      'rounded-[5px]',
+      'bg-[#FFF0E4]',
+      'border-[#F3B489]',
+    )
+    expect(within(recommendationBasis).getByText('#휴양')).not.toHaveClass('rounded-full')
   })
 
   it('uses a warm patterned app background', () => {
@@ -247,18 +418,17 @@ describe('MVP main entry screen', () => {
     seedPreference('제주 · 닛코')
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).toHaveClass(
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toHaveClass(
       'break-keep',
       'max-sm:text-[36px]',
-      'max-sm:leading-[44px]',
     )
     ;['#제주', '#닛코', '#자연'].forEach((tag) => {
-      expect(screen.getByText(tag)).toHaveClass('max-sm:text-[13px]')
+      expect(screen.getAllByText(tag).some((tagElement) => tagElement.className.includes('max-sm:text-[13px]'))).toBe(
+        true,
+      )
     })
     expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveClass(
       'max-sm:w-full',
-      'max-sm:min-h-[48px]',
-      'max-sm:whitespace-normal',
     )
 
     fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
@@ -333,7 +503,7 @@ describe('MVP main entry screen', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByRole('banner')).toBeInTheDocument()
     ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
-      expect(screen.getByText(tag)).toBeInTheDocument()
+      expect(screen.getAllByText(tag).length).toBeGreaterThan(0)
     })
   })
 
@@ -376,17 +546,18 @@ describe('MVP main entry screen', () => {
       screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
     ;['#제주', '#닛코', '#자연'].forEach((tag) => {
-      expect(screen.getByText(tag)).toBeInTheDocument()
+      expect(screen.getAllByText(tag).length).toBeGreaterThan(0)
     })
 
     fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
 
     expect(screen.getByRole('heading', { name: 'AI 일정 챗봇' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '← 이전으로 돌아가기' })).toBeInTheDocument()
-    expect(screen.getByTestId('chat-workspace')).toHaveClass('space-y-6')
-    expect(screen.getByTestId('chat-planner-summary')).toHaveClass('grid')
-    expect(screen.getByTestId('chat-top-grid')).toHaveClass('grid-cols-[minmax(0,0.92fr)_minmax(360px,0.82fr)]')
-    expect(screen.getByRole('region', { name: 'AI 일정 챗봇 요약' })).toBeInTheDocument()
+    expect(screen.getByTestId('chat-workspace')).toHaveClass('space-y-5')
+    expect(screen.getByTestId('chat-planner-summary')).toHaveClass('rounded-[18px]')
+    expect(screen.getByTestId('chat-top-grid')).toHaveClass('grid-cols-[minmax(0,0.96fr)_minmax(360px,0.82fr)]')
+    expect(screen.getByRole('region', { name: 'Planner State' })).toBeInTheDocument()
+    expect(screen.getByTestId('chat-conversation-panel')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'AI 일정 결과' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '생성된 일정 상세' })).not.toBeInTheDocument()
     expect(screen.getByText('축제 포함 여부와 여행 기간을 고르면 일정 초안이 여기에 표시됩니다.')).toBeInTheDocument()
@@ -401,7 +572,7 @@ describe('MVP main entry screen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '← 이전으로 돌아가기' }))
 
-    expect(screen.getByRole('heading', { name: /나만 아는 여행 앱, Lovv/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '당신만 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'AI 일정 챗봇' })).not.toBeInTheDocument()
   })
 
@@ -414,7 +585,7 @@ describe('MVP main entry screen', () => {
       screen.queryByRole('heading', { name: '여행의 분위기를 골라주세요' }),
     ).not.toBeInTheDocument()
     ;['#부산', '#오키나와', '#바다'].forEach((tag) => {
-      expect(screen.getByText(tag)).toBeInTheDocument()
+      expect(screen.getAllByText(tag).length).toBeGreaterThan(0)
     })
   })
 
@@ -638,11 +809,12 @@ describe('MVP main entry screen', () => {
     seedPreference('경주 · 교토')
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '로그아웃' }))
+    signOutFromSessionMenu()
 
     expect(localStorage.getItem(authStorageKey)).toBeNull()
     expect(localStorage.getItem('lovv.preference')).toContain('경주 · 교토')
     expect(screen.getByRole('heading', { name: '서울/오사카 말고, 지금은 이곳' })).toBeInTheDocument()
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
     expect(screen.queryByText('경주 · 교토 감성으로 시작합니다')).not.toBeInTheDocument()
   })
 })

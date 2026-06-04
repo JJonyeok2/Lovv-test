@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import logoImage from './assets/lovv-logo.png'
-import suitcaseImage from './assets/lovv-suitcase-hi.png'
+import foxFaceImage from './assets/foxhead-smile.png'
 import beppuImage from './assets/cities/beppu.jpg'
 import busanImage from './assets/cities/busan.jpg'
 import gangneungImage from './assets/cities/gangneung.jpg'
@@ -34,11 +34,34 @@ type Preference = {
   coverImages: CityCoverImage[]
 }
 
+type MonthlyRecommendation = {
+  id: string
+  preference: Preference
+  title: string
+  summary: string
+  badge: string
+  image: string
+  themes: string[]
+}
+
+type HeroTheme = {
+  id: 'mountain' | 'sea' | 'festival'
+  label: string
+  lead: string
+  accent: string
+  summary: string
+  backgroundImage: string
+  accentClassName: string
+  glowClassName: string
+}
+
 type ChatMessage = {
   id: string
   role: 'assistant' | 'user'
   content: string
 }
+
+type PlannerStepStatus = 'completed' | 'active' | 'pending'
 
 type PlanStop = {
   time: '오전' | '오후' | '저녁'
@@ -103,6 +126,44 @@ const mockAuthUsers: Record<AuthProvider, LovvUser> = {
     provider: 'kakao',
   },
 }
+
+const heroRotationIntervalMs = 10000
+
+const heroThemes: HeroTheme[] = [
+  {
+    id: 'mountain',
+    label: 'Mountain',
+    lead: '당신만 몰랐던',
+    accent: '소도시의 숨은 매력',
+    summary:
+      '복잡한 도심을 벗어나 현지인의 숨결이 닿은 산과 오래된 마을로 초대합니다. Lovv가 제안하는 느린 여행을 시작해보세요.',
+    backgroundImage: gyeongjuImage,
+    accentClassName: 'lovv-text-mountain',
+    glowClassName: 'lovv-hero-glow-mountain',
+  },
+  {
+    id: 'sea',
+    label: 'Sea',
+    lead: '당신만 몰랐던',
+    accent: '소도시의 푸른 바다',
+    summary:
+      '탁 트인 바다와 청량한 바람이 머무는 곳. Lovv와 함께 파도 소리에 맞춰 걷는 특별한 여정을 찾아보세요.',
+    backgroundImage: busanImage,
+    accentClassName: 'lovv-text-sea',
+    glowClassName: 'lovv-hero-glow-sea',
+  },
+  {
+    id: 'festival',
+    label: 'Festival',
+    lead: '당신만 몰랐던',
+    accent: '소도시의 화려한 축제',
+    summary:
+      '밤하늘의 빛, 골목의 음악, 지역의 계절감이 만나는 순간. 축제의 에너지를 담은 소도시 여정을 제안합니다.',
+    backgroundImage: osakaImage,
+    accentClassName: 'lovv-text-festival-gradient',
+    glowClassName: 'lovv-hero-glow-festival',
+  },
+]
 
 const authServiceBullets = [
   'Lovv는 소도시 여행 추천 큐레이션 서비스를 제공합니다.',
@@ -233,7 +294,63 @@ const preferences: Preference[] = [
   },
 ]
 
-type View = 'auth' | 'onboarding' | 'home' | 'chat' | 'planDetail' | 'mypage' | 'preferenceEdit'
+const monthlyRecommendations: MonthlyRecommendation[] = [
+  {
+    id: 'onyang-beppu-slow-onsen',
+    preference: preferences[0],
+    title: '온천으로 회복하는 느린 여행',
+    summary: '숙소 체류와 스파 시간을 넉넉히 두는 회복형 소도시 루트입니다.',
+    badge: '이달의 온천',
+    image: onyangImage,
+    themes: ['온천', '휴양'],
+  },
+  {
+    id: 'busan-okinawa-blue-coast',
+    preference: preferences[1],
+    title: '바다색이 선명한 해안 휴식',
+    summary: '해변 산책과 리조트 여백을 중심에 둔 바다 테마 추천입니다.',
+    badge: '해안 휴식',
+    image: busanImage,
+    themes: ['바다', '해안'],
+  },
+  {
+    id: 'gyeongju-kyoto-old-street',
+    preference: preferences[2],
+    title: '오래된 골목과 전통 산책',
+    summary: '사찰, 전통 거리, 조용한 산책 리듬이 잘 맞는 코스입니다.',
+    badge: '전통 산책',
+    image: gyeongjuImage,
+    themes: ['역사', '전통'],
+  },
+  {
+    id: 'jeonju-osaka-local-table',
+    preference: preferences[3],
+    title: '노포와 시장을 따라가는 미식 산책',
+    summary: '시장과 오래된 가게를 중심으로 로컬 식탁의 리듬을 따라갑니다.',
+    badge: '미식 산책',
+    image: jeonjuImage,
+    themes: ['미식', '노포'],
+  },
+  {
+    id: 'gangneung-kanazawa-craft-note',
+    preference: preferences[5],
+    title: '예술과 감성을 기록하는 하루',
+    summary: '카페, 해변, 공예와 정원 장면을 천천히 따라갑니다.',
+    badge: '감성 기록',
+    image: gangneungImage,
+    themes: ['예술', '감성'],
+  },
+]
+
+type View =
+  | 'auth'
+  | 'onboarding'
+  | 'home'
+  | 'chat'
+  | 'planDetail'
+  | 'mypage'
+  | 'preferenceEdit'
+  | 'themeDetail'
 
 const durationGuidePrompts = ['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일']
 const festivalThemePrompts: { label: string; choice: FestivalThemeChoice }[] = [
@@ -502,20 +619,40 @@ const createPlanId = (preference: Preference, draft: PlanDraft, festivalThemeCho
     .join('-')
     .replace(/\s+/g, '-')
 
-const mapMarkerPositions = [
-  { left: '32%', top: '58%' },
-  { left: '67%', top: '38%' },
-]
-
 const getThemeHashtags = (preference: Preference) => [
   ...preference.coverImages.map((coverImage) => `#${coverImage.city.replace('/', '')}`),
   `#${preference.tag.split('·')[0]}`,
 ]
 
+const compactHashtag = (label: string) =>
+  `#${label
+    .replace(/[·,/]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/-/g, '')
+    .replace(/[()]/g, '')}`
+
+const getRecommendationBasisHashtags = (preference: Preference) => {
+  const themeBasis = preference.tag.split('·').map((theme) => theme.trim())
+
+  return Array.from(new Set(themeBasis.map(compactHashtag).filter((tag) => tag.length > 1))).slice(0, 4)
+}
+
+const getPlannerStepClassName = (status: PlannerStepStatus) => {
+  if (status === 'completed') {
+    return 'border-[#A92B10] bg-[#F36B12] text-[#33271E]'
+  }
+
+  if (status === 'active') {
+    return 'border-[#F36B12] bg-[#FFF0E4] text-[#33271E]'
+  }
+
+  return 'border-[#E9D2C2] bg-[#fffffa] text-[#897163]'
+}
+
 function App() {
-  const proofItems = ['AI 일정', '챗봇', '소도시 보기']
   const [currentUser, setCurrentUser] = useState<LovvUser | null>(() => readStoredUser())
   const [selectedPreference, setSelectedPreference] = useState(() => readStoredPreference() ?? preferences[0])
+  const [activeMonthlyRecommendation, setActiveMonthlyRecommendation] = useState(monthlyRecommendations[0])
   const [activeView, setActiveView] = useState<View>(() => {
     if (!readStoredUser()) {
       return 'auth'
@@ -530,6 +667,7 @@ function App() {
   const [selectedDurationLabel, setSelectedDurationLabel] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false)
+  const [isSessionMenuOpen, setIsSessionMenuOpen] = useState(false)
   const [savedPlanNotice, setSavedPlanNotice] = useState<string | null>(null)
   const [preferenceNotice, setPreferenceNotice] = useState<string | null>(null)
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => readStoredSavedPlans())
@@ -539,11 +677,14 @@ function App() {
     createInitialChatMessages(selectedPreference),
   )
   const [planDraft, setPlanDraft] = useState<PlanDraft>(() => createPlanDraft(selectedPreference))
+  const [currentHeroThemeIndex, setCurrentHeroThemeIndex] = useState(0)
   const isPreferenceEditView = activeView === 'preferenceEdit'
   const preferenceSelection = isPreferenceEditView ? pendingPreference : selectedPreference
   const selectedCoverImage =
     preferenceSelection.coverImages[coverImageIndex] ?? preferenceSelection.coverImages[0]
   const selectedThemeHashtags = getThemeHashtags(selectedPreference)
+  const recommendationBasisHashtags = getRecommendationBasisHashtags(selectedPreference)
+  const currentHeroTheme = heroThemes[currentHeroThemeIndex]
   const shouldShowFestivalPrompt = festivalThemeChoice === 'undecided'
   const shouldShowDurationPrompt = !shouldShowFestivalPrompt && selectedDurationLabel === null
   const isPlannerReady = festivalThemeChoice !== 'undecided' && selectedDurationLabel !== null
@@ -551,25 +692,57 @@ function App() {
   const currentPlanTitle = `${selectedPreference.cityPair} 감성 ${planDraft.durationLabel} 초안`
   const isCurrentPlanSaved = savedPlans.some((plan) => plan.id === currentPlanId)
   const isCurrentPlanLiked = likedPlanIds.includes(currentPlanId)
-  const plannerSummaryCards = [
+  const plannerStateSteps: {
+    id: string
+    label: string
+    status: PlannerStepStatus
+    statusLabel: string
+    body: string
+    chips: string[]
+  }[] = [
     {
-      title: '취향 반영 완료',
+      id: 'preference',
+      label: '취향 반영',
+      status: 'completed',
+      statusLabel: '완료',
       body: `${selectedPreference.cityPair} 감성으로 시작합니다.`,
       chips: [`#${selectedPreference.tag.split('·')[0]}`, selectedPreference.signals[0] ?? selectedPreference.weakSignal],
     },
     {
-      title: '소도시 후보 탐색',
-      body: '취향에 맞는 후보를 먼저 좁히고 있어요.',
+      id: 'candidates',
+      label: '후보 탐색',
+      status: festivalThemeChoice === 'undecided' ? 'active' : 'completed',
+      statusLabel: festivalThemeChoice === 'undecided' ? '진행 중' : '완료',
+      body: '선택한 분위기와 가까운 한국·일본 소도시 후보를 좁히고 있어요.',
       chips: selectedPreference.coverImages.slice(0, 2).map((coverImage) => coverImage.city),
     },
     {
-      title: '일정 초안 구성',
+      id: 'schedule',
+      label: '일정 구성',
+      status: isPlannerReady ? 'completed' : shouldShowDurationPrompt ? 'active' : 'pending',
+      statusLabel: isPlannerReady ? '완료' : shouldShowDurationPrompt ? '진행 중' : '대기',
       body: isPlannerReady
         ? `${selectedDurationLabel ?? planDraft.durationLabel} · ${getFestivalThemeLabel(festivalThemeChoice)}로 구성 중입니다.`
         : '기간과 축제 여부를 고르면 초안이 완성됩니다.',
       chips: isPlannerReady ? ['초안 준비', planDraft.intensityLabel] : ['대기중'],
     },
   ]
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+    if (prefersReducedMotion) {
+      return undefined
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentHeroThemeIndex((themeIndex) => (themeIndex + 1) % heroThemes.length)
+    }, heroRotationIntervalMs)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   const resetPlannerFlow = (preference = selectedPreference) => {
     setChatInput('')
@@ -657,6 +830,7 @@ function App() {
   }
 
   const signOut = () => {
+    setIsSessionMenuOpen(false)
     localStorage.removeItem(authStorageKey)
     setCurrentUser(null)
     setActiveView('auth')
@@ -664,10 +838,12 @@ function App() {
 
   const goHome = (event?: React.MouseEvent<HTMLElement>) => {
     event?.preventDefault()
+    setIsSessionMenuOpen(false)
     setActiveView('home')
   }
 
   const openMyPage = () => {
+    setIsSessionMenuOpen(false)
     setActiveView('mypage')
   }
 
@@ -693,10 +869,15 @@ function App() {
         ? 'Google mock'
         : 'Mock session'
 
-  const openChat = (event?: React.MouseEvent<HTMLAnchorElement>) => {
+  const openChat = (event?: React.MouseEvent<HTMLElement>) => {
     event?.preventDefault()
+    setIsSessionMenuOpen(false)
     resetPlannerFlow()
     setActiveView('chat')
+  }
+
+  const toggleSessionMenu = () => {
+    setIsSessionMenuOpen((isOpen) => !isOpen)
   }
 
   const openChatFromQuickAction = () => {
@@ -717,6 +898,20 @@ function App() {
         cityPair: preference.cityPair,
       }),
     )
+  }
+
+  const openMonthlyRecommendationDetail = (recommendation: MonthlyRecommendation) => {
+    setActiveMonthlyRecommendation(recommendation)
+    setIsQuickActionsOpen(false)
+    setActiveView('themeDetail')
+  }
+
+  const openMonthlyRecommendationPlan = (preference: Preference) => {
+    storePreference(preference)
+    setSelectedPreference(preference)
+    resetPlannerFlow(preference)
+    setIsQuickActionsOpen(false)
+    setActiveView('chat')
   }
 
   const enterMainWithPreference = () => {
@@ -801,6 +996,249 @@ function App() {
     event.preventDefault()
     submitChatMessage(chatInput)
   }
+
+  const renderPlannerStateHeader = () => (
+    <section
+      aria-label="Planner State"
+      data-testid="chat-planner-summary"
+      className="min-w-0 rounded-[18px] border border-[#F3B489] bg-[#fffffa] p-6 shadow-[0_18px_42px_-28px_rgba(51,39,30,0.22)]"
+    >
+      <div className="grid grid-cols-[minmax(220px,0.8fr)_minmax(0,1.45fr)_minmax(220px,0.7fr)] items-start gap-5 max-xl:grid-cols-1">
+        <div>
+          <p className="text-sm font-semibold text-[#33271E]">Lovv AI Planner</p>
+          <h2
+            id="chat-title"
+            className="mt-3 break-keep text-[28px] font-black leading-9 text-[#33271E] max-sm:text-2xl max-sm:leading-8"
+          >
+            AI 일정 챗봇
+          </h2>
+          <p className="mt-4 break-keep text-sm leading-6 text-[#33271E]">
+            {selectedPreference.cityPair} 감성을 기준으로 축제 포함 여부와 여행 기간을 먼저 정리합니다.
+          </p>
+        </div>
+
+        <ol aria-label="AI 일정 진행 상태" className="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+          {plannerStateSteps.map((step, index) => (
+            <li
+              key={step.id}
+              className={`min-w-0 rounded-[14px] border px-4 py-3 ${getPlannerStepClassName(step.status)}`}
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current bg-white/50 text-[12px] font-black"
+                  aria-hidden="true"
+                >
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="break-keep text-sm font-black leading-5">{step.label}</h3>
+                    <span className="rounded-[5px] border border-current bg-white/45 px-2 py-0.5 text-[11px] font-black leading-4">
+                      {step.statusLabel}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 break-keep text-[12px] font-semibold leading-5">
+                    {step.body}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {step.chips.slice(0, 2).map((chip) => (
+                      <span
+                        key={`${step.id}-${chip}`}
+                        className="inline-flex min-h-7 items-center rounded-[5px] border border-current bg-white/50 px-2.5 py-0.5 text-[11px] font-black leading-4"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <div className="rounded-[14px] border border-[#F3B489] bg-[#FFF8F6] p-5">
+          <p className="text-[12px] font-black uppercase tracking-[0.12em] text-[#A92B10]">AI Tip</p>
+          <p className="mt-3 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+            취향, 기간, 축제 포함 여부를 먼저 정리하면 일정 초안의 이동 강도와 추천 이유가 더 분명해집니다.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+
+  const renderAssistantOptionGroup = (
+    promptText: string,
+    options: {
+      key: string
+      label: string
+      selected?: boolean
+      onClick: () => void
+    }[],
+  ) => (
+    <div className="flex max-w-[720px] items-start gap-3">
+      <span
+        className="mt-6 flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F3B489] bg-[#FFF0E4]"
+        aria-hidden="true"
+      >
+        <img src={foxFaceImage} alt="" className="h-full w-full object-cover" />
+      </span>
+      <div className="min-w-0">
+        <p className="mb-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#315B3E]">
+          Lovv AI
+        </p>
+        <div className="inline-flex max-w-full rounded-[18px] border border-[#F3B489] bg-white px-5 py-4 text-sm font-bold leading-6 text-[#33271E] shadow-[0_12px_24px_-20px_rgba(51,39,30,0.28)] max-sm:text-[13px] max-sm:leading-6">
+          {promptText}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {options.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              aria-pressed={option.selected}
+              onClick={option.onClick}
+              className={`inline-flex min-h-[38px] items-center rounded-full border px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                option.selected
+                  ? 'border-[#A92B10] bg-[#F36B12]'
+                  : 'border-[#F3B489] bg-[#FFF8F6]'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderChatConversationPanel = () => (
+    <section
+      aria-labelledby="chat-title"
+      data-testid="chat-conversation-panel"
+      className="flex min-h-[660px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-[#F3B489] bg-[#fffffa] shadow-[0_18px_42px_-28px_rgba(51,39,30,0.22)]"
+    >
+      <header className="border-b border-[#F3B489] bg-[#FFF8F6] px-6 py-5">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#A92B10]">
+              Lovv Conversation
+            </p>
+            <h3 className="mt-2 break-keep text-2xl font-black leading-8 text-[#33271E] max-sm:text-xl max-sm:leading-7">
+              여행 조건을 대화로 정리하기
+            </h3>
+          </div>
+          <span
+            className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#A92B10] bg-[#FFF0E4]"
+            aria-hidden="true"
+          >
+            <img src={foxFaceImage} alt="" className="h-full w-full object-cover" />
+          </span>
+        </div>
+      </header>
+      <div role="log" aria-label="AI 일정 대화" className="flex-1 space-y-5 px-6 py-6">
+        {chatMessages.map((message) => {
+          const isAssistant = message.role === 'assistant'
+
+          return (
+            <article
+              key={message.id}
+              className={`flex gap-3 ${isAssistant ? 'justify-start' : 'justify-end'}`}
+            >
+              {isAssistant ? (
+                <span
+                  className="mt-6 flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#F3B489] bg-[#FFF0E4]"
+                  aria-hidden="true"
+                >
+                  <img src={foxFaceImage} alt="" className="h-full w-full object-cover" />
+                </span>
+              ) : null}
+              <div className={`min-w-0 max-w-[620px] ${isAssistant ? '' : 'items-end text-right'}`}>
+                <p
+                  className={`mb-1 text-[11px] font-black uppercase tracking-[0.12em] ${
+                    isAssistant ? 'text-[#315B3E]' : 'text-[#A92B10]'
+                  }`}
+                >
+                  {isAssistant ? 'Lovv AI' : '내 조건'}
+                </p>
+                <div
+                  className={`break-keep rounded-[18px] border px-5 py-4 text-sm leading-6 text-[#33271E] shadow-[0_12px_24px_-20px_rgba(51,39,30,0.25)] max-sm:text-[13px] max-sm:leading-6 ${
+                    isAssistant
+                      ? 'border-[#F3B489] bg-white'
+                      : 'ml-auto border-[#A92B10] bg-[#F36B12] font-semibold'
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            </article>
+          )
+        })}
+
+        {shouldShowFestivalPrompt
+          ? renderAssistantOptionGroup(
+              '축제 테마를 일정에 포함할까요?',
+              festivalThemePrompts.map((prompt) => ({
+                key: prompt.choice,
+                label: prompt.label,
+                selected: festivalThemeChoice === prompt.choice,
+                onClick: () => submitChatMessage(prompt.label),
+              })),
+            )
+          : null}
+
+        {shouldShowDurationPrompt
+          ? renderAssistantOptionGroup(
+              '일정 기간을 먼저 골라주세요',
+              durationGuidePrompts.map((prompt) => ({
+                key: prompt,
+                label: prompt,
+                onClick: () => submitChatMessage(prompt),
+              })),
+            )
+          : null}
+
+        {isPlannerReady ? (
+          <div className="rounded-[18px] border border-[#F3B489] bg-[#FFF8F6] p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-[5px] border border-[#F3B489] bg-[#fffffa] px-3 py-1 text-[12px] font-bold text-[#33271E]">
+                일정 초안
+              </span>
+              <span className="rounded-[5px] border border-[#F3B489] bg-[#FFF0E4] px-3 py-1 text-[12px] font-bold text-[#33271E]">
+                {planDraft.durationLabel}
+              </span>
+              <span className="rounded-[5px] border border-[#F3B489] bg-[#FFF0E4] px-3 py-1 text-[12px] font-bold text-[#33271E]">
+                {planDraft.intensityLabel} 반영
+              </span>
+            </div>
+            <p className="mt-3 break-keep text-sm font-semibold leading-6 text-[#33271E] max-sm:text-[13px]">
+              하단 일정 상세에 반영했어요. 시간대별 동선과 추천 이유를 이어서 확인해 주세요.
+            </p>
+          </div>
+        ) : null}
+      </div>
+      <div className="border-t border-[#F3B489] bg-[#FFF8F6] p-5">
+        <form
+          onSubmit={submitChatForm}
+          className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-full border border-[#F3B489] bg-[#fffffa] p-2 shadow-[0_16px_32px_-26px_rgba(51,39,30,0.35)] max-sm:grid-cols-1 max-sm:rounded-[22px]"
+        >
+          <input
+            aria-label="여행 조건 입력"
+            value={chatInput}
+            onChange={(event) => setChatInput(event.target.value)}
+            placeholder="동행, 관심사, 걷는 정도를 추가로 입력해 주세요"
+            className="min-h-11 min-w-0 rounded-full border-0 bg-transparent px-4 py-2 break-keep text-sm leading-5 text-[#33271E] outline-none placeholder:text-[#8A7467] focus:bg-[#FFF8F6] max-sm:text-[13px]"
+          />
+          <button
+            type="submit"
+            aria-label="메시지 보내기"
+            disabled={!chatInput.trim()}
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-6 text-sm font-bold text-[#33271E] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-[#A92B10] disabled:hover:bg-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+          >
+            보내기
+          </button>
+        </form>
+      </div>
+    </section>
+  )
 
   const renderItineraryPanel = () => {
     if (!isPlannerReady) {
@@ -1003,6 +1441,133 @@ function App() {
     )
   }
 
+  const renderThemeDetailView = () => {
+    const recommendation = activeMonthlyRecommendation
+    const preference = recommendation.preference
+    const detailFacts = [
+      {
+        label: '기준 테마',
+        value: preference.tag,
+        body: recommendation.themes.map((theme) => `#${theme}`).join(' '),
+      },
+      {
+        label: '추천 이유',
+        value: recommendation.badge,
+        body: preference.editorialNote,
+      },
+      {
+        label: '첫 동선 단서',
+        value: preference.routeHint,
+        body: 'AI 일정은 이 동선 단서를 기준으로 기간과 축제 포함 여부를 좁힙니다.',
+      },
+    ]
+
+    return (
+      <section
+        aria-labelledby="theme-detail-title"
+        className="mx-auto min-h-dvh max-w-[1440px] px-[55px] pb-16 pt-28 max-lg:px-8 max-sm:px-5"
+      >
+        <button
+          type="button"
+          onClick={goHome}
+          className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#F3B489] bg-[#fffffa] px-5 text-sm font-bold text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+        >
+          ← 추천 카드로 돌아가기
+        </button>
+
+        <div className="mt-5 overflow-hidden rounded-[24px] border border-[#F3B489] bg-[#fffffa] shadow-[0_18px_48px_-32px_rgba(51,39,30,0.35)]">
+          <div className="grid min-h-[460px] grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] max-lg:grid-cols-1">
+            <div className="relative min-h-[460px] overflow-hidden bg-[#33271E] max-sm:min-h-[320px]">
+              <img
+                src={recommendation.image}
+                alt=""
+                onError={(event) => {
+                  event.currentTarget.hidden = true
+                }}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1F1A17]/86 via-[#1F1A17]/18 to-transparent" />
+              <div className="relative z-10 flex h-full min-h-[inherit] flex-col justify-between p-8 text-white max-sm:p-5">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-[5px] border border-white/70 bg-white/90 px-3 py-1 text-[12px] font-black text-[#33271E]">
+                    {recommendation.badge}
+                  </span>
+                  <span className="rounded-[5px] border border-white/50 bg-white/18 px-3 py-1 text-[12px] font-bold text-white backdrop-blur">
+                    {preference.cityPair}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-white/80">
+                    Theme detail
+                  </p>
+                  <h1
+                    id="theme-detail-title"
+                    className="mt-3 break-keep text-[42px] font-black leading-[50px] tracking-normal max-sm:text-[30px] max-sm:leading-10"
+                  >
+                    {recommendation.title}
+                  </h1>
+                  <p className="mt-4 max-w-[620px] break-keep text-base font-semibold leading-7 text-white/90 max-sm:text-sm max-sm:leading-6">
+                    {recommendation.summary}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 flex-col justify-between gap-8 p-8 max-sm:p-5">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.16em] text-[#F36B12]">
+                  Recommendation basis
+                </p>
+                <h2 className="mt-3 break-keep text-[30px] font-black leading-10 text-[#33271E] max-sm:text-2xl max-sm:leading-8">
+                  이 테마를 추천하는 기준
+                </h2>
+                <p className="mt-4 break-keep text-sm font-semibold leading-7 text-[#33271E]">
+                  Lovv는 도시 이름보다 먼저 여행 분위기를 정리하고, 해당 테마와 가까운 소도시 후보를 일정 대화로 연결합니다.
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {detailFacts.map((fact) => (
+                  <article
+                    key={fact.label}
+                    className="rounded-[8px] border border-[#F3B489] bg-[#FFF0E4] p-5"
+                  >
+                    <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#A92B10]">
+                      {fact.label}
+                    </p>
+                    <h3 className="mt-2 break-keep text-lg font-black leading-7 text-[#33271E]">
+                      {fact.value}
+                    </h3>
+                    <p className="mt-2 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                      {fact.body}
+                    </p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openMonthlyRecommendationPlan(preference)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-[#A92B10] bg-[#F36B12] px-6 text-sm font-black text-[#33271E] transition hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:w-full"
+                >
+                  이 테마로 일정 계획하기
+                </button>
+                <button
+                  type="button"
+                  onClick={goHome}
+                  className="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-[#F3B489] bg-[#fffffa] px-6 text-sm font-black text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:w-full"
+                >
+                  다른 추천 보기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   const renderPlanDetailView = () => {
     if (!isPlannerReady) {
       return (
@@ -1185,6 +1750,45 @@ function App() {
     )
   }
 
+  const renderFooter = () => (
+    <footer className="mx-auto max-w-[1440px] px-16 pb-10 pt-4 max-lg:px-8 max-sm:px-5" role="contentinfo">
+      <div className="grid gap-6 rounded-[24px] border border-[#F3B489] bg-[#fffffa]/90 px-7 py-6 shadow-[0_16px_42px_-30px_rgba(51,39,30,0.32)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <p className="text-xl font-black leading-6 text-[#33271E]">Lovv</p>
+          </div>
+          <p className="mt-3 break-keep text-[12px] font-semibold leading-5 text-[#33271E]/70">
+            © 2026 Lovv. All rights reserved.
+          </p>
+        </div>
+
+        <nav aria-label="Lovv footer links" className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-[#33271E]">
+          <a
+            href="#home"
+            onClick={goHome}
+            className="rounded-full transition hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+          >
+            이용약관
+          </a>
+          <a
+            href="#home"
+            onClick={goHome}
+            className="rounded-full transition hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+          >
+            개인정보처리방침
+          </a>
+          <a
+            href="#home"
+            onClick={goHome}
+            className="rounded-full transition hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+          >
+            문의하기
+          </a>
+        </nav>
+      </div>
+    </footer>
+  )
+
   return (
     <main className="lovv-app-shell lovv-warm-pattern lovv-ambient-background min-h-dvh bg-[#fff8ee] text-[#33271E]">
       <div className="lovv-app-content">
@@ -1195,7 +1799,7 @@ function App() {
         >
           <div
             data-testid="auth-fixed-panel"
-            className="flex min-h-dvh min-w-0 flex-col justify-between border-r border-[#A92B10]/70 px-16 py-16 max-lg:min-h-0 max-lg:border-b max-lg:border-r-0 max-lg:px-8 max-lg:py-10 max-sm:px-5"
+            className="lovv-auth-left-panel flex min-h-dvh min-w-0 flex-col justify-between border-r border-[#A92B10]/70 px-16 py-16 max-lg:min-h-0 max-lg:border-b max-lg:border-r-0 max-lg:px-8 max-lg:py-10 max-sm:px-5"
           >
             <div>
               <img src={logoImage} alt="Lovv" className="h-16 w-[116px] object-contain" />
@@ -1239,18 +1843,30 @@ function App() {
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-[12px] font-bold text-[#33271E]/80">
-              <a href="#auth-title" className="hover:text-[#F36B12]">
+              <a
+                href="#auth-title"
+                className="rounded-full hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+              >
                 이용약관
               </a>
-              <a href="#auth-title" className="hover:text-[#F36B12]">
+              <a
+                href="#auth-title"
+                className="rounded-full hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+              >
                 개인정보처리방침
+              </a>
+              <a
+                href="#auth-title"
+                className="rounded-full hover:text-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E]"
+              >
+                문의하기
               </a>
             </div>
           </div>
 
           <div
             data-testid="auth-scroll-panel"
-            className="min-h-dvh overflow-y-auto px-20 py-20 max-lg:min-h-0 max-lg:overflow-visible max-lg:px-8 max-lg:py-12 max-sm:px-5"
+            className="lovv-auth-story-panel min-h-dvh overflow-y-auto px-20 py-20 max-lg:min-h-0 max-lg:overflow-visible max-lg:px-8 max-lg:py-12 max-sm:px-5"
           >
             <div className="mx-auto max-w-[720px] pb-16">
               <div className="inline-flex min-h-[32px] items-center rounded-full bg-[#FFF0E4] px-4 text-[12px] font-black text-[#A92B10]">
@@ -1497,33 +2113,58 @@ function App() {
         </section>
       ) : (
         <>
-          <header className="fixed inset-x-0 top-0 z-20 h-14 border-b border-[#F3B489] bg-white/95 shadow-[0_3px_10.5px_rgba(51,39,30,0.05)] backdrop-blur">
-            <nav className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-9 max-sm:px-5">
+          <header className="fixed inset-x-0 top-0 z-20 border-b border-[#F3B489] bg-white/95 shadow-[0_3px_10.5px_rgba(51,39,30,0.05)] backdrop-blur">
+            <div className="mx-auto flex min-h-[72px] max-w-[1440px] flex-wrap items-center gap-3 px-9 py-2 max-lg:px-8 max-sm:px-5">
               <a
                 href="#home"
                 aria-label="Lovv home"
                 onClick={goHome}
-                className="block h-14 w-[102px] overflow-hidden"
+                className="flex h-14 w-[104px] shrink-0 items-center overflow-hidden"
               >
                 <img src={logoImage} alt="Lovv" className="h-full w-full object-contain" />
               </a>
-              <div className="flex min-w-0 items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={openMyPage}
-                  className="inline-flex h-auto min-h-8 items-center justify-center rounded-[10.5px] border border-[#A92B10] bg-[#F36B12] px-3 text-center text-[10.5px] font-bold leading-4 text-[#33271E] shadow-[0_3px_10.5px_rgba(51,39,30,0.05)] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                >
-                  마이페이지
-                </button>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="inline-flex h-auto min-h-8 items-center justify-center rounded-[10.5px] border border-[#F3B489] bg-[#fffffa] px-3 text-center text-[10.5px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                >
-                  로그아웃
-                </button>
+
+              <div className="min-w-0 flex-1" />
+
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 max-sm:w-auto">
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isSessionMenuOpen}
+                    aria-label={`현재 세션: ${currentProviderLabel} 메뉴 열기`}
+                    onClick={toggleSessionMenu}
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] text-sm font-black text-[#33271E] shadow-[0_3px_10.5px_rgba(51,39,30,0.05)] transition hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                  >
+                    {currentUser?.avatarInitial ?? 'M'}
+                  </button>
+                  {isSessionMenuOpen ? (
+                    <div
+                      role="menu"
+                      aria-label="세션 메뉴"
+                      className="absolute right-0 top-[calc(100%+10px)] z-30 grid min-w-[168px] gap-2 rounded-[18px] border border-[#F3B489] bg-white/95 p-2 shadow-[0_18px_42px_-24px_rgba(51,39,30,0.42)] backdrop-blur"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={openMyPage}
+                        className="inline-flex min-h-10 w-full items-center justify-start rounded-[14px] px-4 text-sm font-bold text-[#33271E] transition hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                      >
+                        마이페이지
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={signOut}
+                        className="inline-flex min-h-10 w-full items-center justify-start rounded-[14px] px-4 text-sm font-bold text-[#A92B10] transition hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                      >
+                        로그아웃
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </nav>
+            </div>
           </header>
 
           {activeView === 'home' ? (
@@ -1532,79 +2173,140 @@ function App() {
                 id="home"
                 data-testid="main-entry"
                 aria-labelledby="main-entry-title"
-                className="lovv-hero-radial mx-auto grid min-h-[732px] max-w-[1440px] grid-cols-[minmax(0,1fr)_430px] items-start gap-20 px-[77px] pt-[145px] max-lg:grid-cols-1 max-lg:px-8 max-lg:pt-28 max-sm:px-5"
+                data-theme={currentHeroTheme.id}
+                className="lovv-rotating-hero relative mx-auto min-h-[820px] max-w-[1440px] overflow-hidden px-[55px] pb-24 pt-[132px] max-lg:min-h-[780px] max-lg:px-8 max-sm:min-h-[740px] max-sm:px-5 max-sm:pb-20 max-sm:pt-36"
               >
-                <div className="max-w-[620px]">
-                  <p className="break-keep text-base font-semibold leading-[22px] text-[#33271E] max-sm:text-sm max-sm:leading-5">
-                    한국과 일본 소도시 여행을 가장 쉽게 시작하는 방법
-                  </p>
+                <div className="absolute inset-0">
+                  {heroThemes.map((theme) => {
+                    const isActiveTheme = theme.id === currentHeroTheme.id
+
+                    return (
+                      <div
+                        key={theme.id}
+                        data-testid={`hero-theme-${theme.id}`}
+                        aria-hidden={!isActiveTheme}
+                        className={`lovv-hero-background-layer absolute inset-0 ${
+                          isActiveTheme ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      >
+                        <img
+                          src={theme.backgroundImage}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )
+                  })}
+                  <div className="lovv-hero-tone-veil absolute inset-0" />
+                  <div className="lovv-hero-focus-wash absolute inset-0" />
+                  <div className="lovv-hero-tone-bridge absolute inset-x-0 bottom-0" />
+                </div>
+
+                <div className={`lovv-hero-theme-glow ${currentHeroTheme.glowClassName}`} aria-hidden="true" />
+
+                <div className="relative z-10 mx-auto flex min-h-[600px] max-w-[880px] flex-col items-center justify-center text-center max-lg:min-h-[560px] max-sm:min-h-[510px]">
+                  <div className="inline-flex min-h-[58px] items-center gap-3 rounded-full border border-white/80 bg-white/90 px-5 py-2 text-sm font-bold text-[#A92B10] shadow-[0_20px_46px_-30px_rgba(51,39,30,0.55)] backdrop-blur max-sm:min-h-[52px] max-sm:text-[12px]">
+                    <span className="grid size-10 place-items-center overflow-hidden rounded-full bg-[#FFF0E4]">
+                      <img
+                        src={foxFaceImage}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    안녕! 나랑 같이 떠날래?
+                  </div>
+
                   <h1
                     id="main-entry-title"
-                    aria-label="나만 아는 여행 앱, Lovv"
-                    className="mt-3 break-keep text-[58px] font-bold leading-[68px] tracking-normal text-[#33271E] max-sm:text-[36px] max-sm:leading-[44px]"
+                    aria-label={`${currentHeroTheme.lead} ${currentHeroTheme.accent}`}
+                    className="mt-8 break-keep text-[56px] font-black leading-[1.08] tracking-normal text-[#1F1A17] drop-shadow-[0_2px_20px_rgba(255,255,255,0.75)] max-sm:mt-6 max-sm:text-[36px]"
                   >
-                    <span className="block">나만 아는</span>
-                    <span className="block">
-                      여행 앱,{' '}
-                      <span className="lovv-headline-wordmark text-[#F36B12] drop-shadow-[0_3px_0_rgba(169,43,16,0.2)]">
-                        Lovv
-                      </span>
+                    <span className="block">{currentHeroTheme.lead}</span>
+                    <span
+                      data-testid="hero-slogan-accent"
+                      className={`block ${currentHeroTheme.accentClassName}`}
+                    >
+                      {currentHeroTheme.accent}
                     </span>
                   </h1>
-                  <div aria-label="선택한 여행 테마" className="mt-7 flex max-w-full flex-wrap gap-2">
+
+                  <p className="mt-7 max-w-[680px] break-keep text-base font-semibold leading-8 text-[#4A3A31] max-sm:text-sm max-sm:leading-7">
+                    {currentHeroTheme.summary}
+                  </p>
+
+                  <div aria-label="선택한 여행 테마" className="mt-6 flex max-w-full flex-wrap justify-center gap-2">
                     {selectedThemeHashtags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 break-keep text-sm font-bold leading-5 text-[#33271E] shadow-[0_10px_24px_-18px_rgba(51,39,30,0.28)] max-sm:text-[13px]"
+                        className="inline-flex min-h-[34px] items-center rounded-full border border-white/80 bg-white/80 px-4 py-1 break-keep text-sm font-bold leading-5 text-[#33271E] shadow-[0_10px_24px_-18px_rgba(51,39,30,0.28)] backdrop-blur max-sm:text-[13px]"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
-                  <p className="mt-8 max-w-[600px] break-keep text-lg leading-[31px] text-[#33271E] max-sm:mt-7 max-sm:text-base max-sm:leading-7">
-                    여행 조건을 길게 입력하지 않아도 괜찮아요. <br />
-                    한국과 일본의 작은 도시를 기준으로 취향에 맞는 여행 흐름을 먼저 제안합니다.
-                  </p>
-                  <a
-                    href="#chat"
-                    onClick={openChat}
-                    className="mt-7 inline-flex h-[52px] w-[178px] items-center justify-center rounded-[18px] border border-[#A92B10] bg-[#F36B12] px-5 text-center text-sm font-semibold leading-5 text-[#33271E] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] transition hover:-translate-y-0.5 hover:border-[#A92B10] hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:h-auto max-sm:min-h-[48px] max-sm:w-full max-sm:whitespace-normal"
+
+                  <div className="mt-9 flex flex-wrap justify-center gap-4 max-sm:w-full max-sm:flex-col">
+                    <a
+                      href="#monthly-recommendations"
+                      className="inline-flex min-h-[58px] min-w-[210px] items-center justify-center rounded-[20px] border border-[#A92B10] bg-[#B64A00] px-8 text-center text-base font-black text-white shadow-[0_18px_42px_-20px_rgba(51,39,30,0.55)] transition hover:-translate-y-0.5 hover:bg-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:w-full"
+                    >
+                      여행지 찾아보기
+                    </a>
+                    <a
+                      href="#chat"
+                      onClick={openChat}
+                      className="inline-flex min-h-[58px] min-w-[190px] items-center justify-center rounded-[20px] border border-white/85 bg-white/90 px-8 text-center text-base font-black text-[#B64A00] shadow-[0_18px_42px_-24px_rgba(51,39,30,0.42)] transition hover:-translate-y-0.5 hover:border-[#F3B489] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] max-sm:w-full"
+                    >
+                      AI 일정 짜기
+                    </a>
+                  </div>
+
+                  <div
+                    aria-label="현재 히어로 테마"
+                    className="mt-8 flex flex-wrap justify-center gap-2"
                   >
-                    AI 일정 짜기
-                  </a>
+                    {heroThemes.map((theme) => (
+                      <span
+                        key={theme.id}
+                        aria-current={theme.id === currentHeroTheme.id ? 'true' : undefined}
+                        className={`inline-flex h-2.5 w-8 rounded-full transition ${
+                          theme.id === currentHeroTheme.id ? 'bg-[#F36B12]' : 'bg-white/70'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
 
-                <div className="lovv-float-soft -mt-2.5 justify-self-end max-lg:mt-0 max-lg:justify-self-start">
-                  <img
-                    src={suitcaseImage}
-                    alt="손을 흔드는 오렌지색 캐리어 캐릭터"
-                    className="h-[531px] w-[430px] object-contain max-sm:h-auto max-sm:w-full"
-                  />
-                </div>
               </section>
 
               <section className="mx-auto max-w-[1440px] px-[55px] pb-8 max-sm:px-5">
-                <div className="grid min-h-[126px] grid-cols-[1fr_auto] items-center gap-8 rounded-3xl border border-[#F3B489] bg-white/80 px-[31px] py-7 shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] max-lg:grid-cols-1">
+                <div
+                  data-testid="proof-summary-panel"
+                  className="grid min-h-[126px] grid-cols-[1fr_auto] items-center gap-8 rounded-3xl border border-[#F3B489] bg-white/80 px-[31px] py-7 shadow-[0_12px_28px_-14px_rgba(33,46,33,0.1)] max-lg:grid-cols-1"
+                >
                   <div>
                     <h2 className="break-keep text-[22px] font-semibold leading-7 text-[#33271E] max-sm:text-xl">
-                      처음엔 작게, 추천은 정확하게
+                      처음엔 작게, 추천은 명확하게
                     </h2>
                     <p className="mt-2 break-keep text-sm leading-5 text-[#33271E]">
-                      한국과 일본 소도시부터 검증하고, 사용자의 테마 선택으로 일정 추천 품질을 높입니다.
+                      Lovv는 선택한 기준 테마를 먼저 보고, 같은 분위기의 소도시 후보를 좁힙니다.
                     </p>
                   </div>
-                  <ul className="flex flex-wrap gap-3">
-                    {proofItems.map((item, index) => (
-                      <li key={item}>
-                        <a
-                          href={item === '소도시 보기' ? '#home' : '#chat'}
-                          onClick={item === '소도시 보기' ? goHome : openChat}
-                          className={`inline-flex h-[34px] items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-8 text-center text-xs leading-4 text-[#33271E] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] max-sm:h-auto max-sm:min-h-[34px] max-sm:px-4 max-sm:whitespace-normal ${
-                            index === 0 ? 'font-semibold' : 'font-medium'
+                  <ul
+                    aria-label="추천 근거 해시태그"
+                    className="flex max-w-[560px] flex-wrap justify-end gap-2 max-lg:justify-start"
+                  >
+                    {recommendationBasisHashtags.map((tag, index) => (
+                      <li key={tag}>
+                        <span
+                          className={`inline-flex min-h-[34px] items-center rounded-[5px] border px-3 py-1 text-[12px] font-bold leading-4 text-[#33271E] ${
+                            index === 0
+                              ? 'border-[#A92B10] bg-[#F36B12]'
+                              : 'border-[#F3B489] bg-[#FFF0E4]'
                           }`}
                         >
-                          {item}
-                        </a>
+                          {tag}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -1612,78 +2314,104 @@ function App() {
               </section>
 
               <section
-                id="small-city-map"
-                aria-labelledby="small-city-map-title"
-                className="mx-auto max-w-[1440px] px-[55px] pb-10 max-sm:px-5"
+                id="monthly-recommendations"
+                aria-labelledby="monthly-recommendations-title"
+                className="mx-auto max-w-[1440px] px-[55px] pb-12 max-sm:px-5"
               >
-                <div className="grid min-h-[320px] grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-6 rounded-3xl border border-[#F3B489] bg-white/80 p-6 shadow-[0_18px_50px_-34px_rgba(51,39,30,0.24)] max-lg:grid-cols-1">
-                  <div className="flex min-w-0 flex-col justify-between gap-6">
-                    <div>
-                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#F36B12]">
-                        Small city route
-                      </p>
-                      <h2
-                        id="small-city-map-title"
-                        className="mt-3 break-keep text-[28px] font-bold leading-9 text-[#33271E] max-sm:text-2xl max-sm:leading-8"
-                      >
-                        소도시 지도 프리뷰
-                      </h2>
-                      <p className="mt-3 break-keep text-sm leading-6 text-[#33271E]">
-                        선택한 테마와 가까운 도시를 먼저 지도 위에 표시하고, AI 일정은 이 후보를 기준으로 대화를 시작합니다.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedPreference.coverImages.map((coverImage) => (
-                        <span
-                          key={coverImage.city}
-                          className="inline-flex min-h-[34px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold text-[#33271E]"
-                        >
-                          {coverImage.city}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div
-                    aria-label="선택한 소도시 지도"
-                    className="lovv-mini-map relative min-h-[280px] overflow-hidden rounded-[26px] border border-[#F3B489] bg-[#FFF0E4]"
-                  >
-                    <div className="absolute inset-0 opacity-70">
-                      <div className="absolute left-[10%] top-[18%] h-[64%] w-[32%] rounded-[55%] border border-[#F3B489]" />
-                      <div className="absolute right-[8%] top-[14%] h-[70%] w-[38%] rounded-[55%] border border-[#F3B489]" />
-                      <div className="absolute left-[42%] top-[24%] h-[58%] w-[20%] rotate-12 rounded-[50%] border border-[#F3B489]" />
-                    </div>
-                    <svg
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full"
-                      viewBox="0 0 100 100"
-                      preserveAspectRatio="none"
+                <div className="mb-6 flex items-end justify-between gap-6 max-md:flex-col max-md:items-start">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#F36B12]">
+                      Monthly picks
+                    </p>
+                    <h2
+                      id="monthly-recommendations-title"
+                      className="mt-3 break-keep text-[34px] font-black leading-10 text-[#33271E] max-sm:text-[28px] max-sm:leading-9"
                     >
-                      <path
-                        d="M32 58 C45 40, 52 52, 67 38"
-                        fill="none"
-                        stroke="#F36B12"
-                        strokeDasharray="4 4"
-                        strokeLinecap="round"
-                        strokeWidth="1.8"
-                      />
-                    </svg>
-                    {selectedPreference.coverImages.map((coverImage, index) => (
-                      <button
-                        key={coverImage.city}
-                        type="button"
-                        aria-label={`${coverImage.city} 소도시 지도 마커`}
-                        style={mapMarkerPositions[index]}
-                        className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-[#A92B10] bg-white px-3 py-2 text-[12px] font-black text-[#33271E] shadow-[0_12px_30px_-18px_rgba(51,39,30,0.5)] transition hover:scale-[1.03] hover:bg-[#FFF0E4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                      >
-                        <span className="size-2 rounded-full bg-[#F36B12]" />
-                        {coverImage.city}
-                      </button>
-                    ))}
-                    <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-[#F3B489] bg-white/90 px-4 py-3 text-[12px] font-bold leading-5 text-[#33271E] shadow-[0_12px_30px_-24px_rgba(51,39,30,0.45)]">
-                      {selectedPreference.tag} 테마 후보를 먼저 띄워두고, 일정 대화에서 기간과 축제 포함 여부를 좁혀갑니다.
-                    </div>
+                      이번 달 추천 소도시
+                    </h2>
+                    <p className="mt-3 max-w-[660px] break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                      계절감과 선택 테마가 잘 맞는 한국과 일본의 소도시 후보를 먼저 골랐습니다.
+                    </p>
                   </div>
+                  <p className="rounded-[5px] border border-[#F3B489] bg-white/80 px-4 py-2 text-[12px] font-bold leading-5 text-[#33271E]">
+                    카드를 선택하면 테마 상세 정보를 먼저 확인할 수 있습니다.
+                  </p>
+                </div>
+
+                <div
+                  data-testid="monthly-recommendation-grid"
+                  className="grid auto-rows-[296px] grid-cols-4 gap-5 max-lg:grid-cols-2 max-md:auto-rows-[306px] max-sm:grid-cols-1 max-sm:auto-rows-auto"
+                >
+                  {monthlyRecommendations.map((recommendation, index) => {
+                    const isFeatured = index === 0
+                    const isCurrentRecommendation =
+                      recommendation.preference.cityPair === selectedPreference.cityPair
+
+                    return (
+                      <button
+                        key={recommendation.id}
+                        type="button"
+                        aria-current={isCurrentRecommendation ? 'true' : undefined}
+                        aria-label={`${recommendation.preference.cityPair} 이달 추천 상세 보기`}
+                        onClick={() => openMonthlyRecommendationDetail(recommendation)}
+                        className={`group relative min-w-0 overflow-hidden rounded-[8px] border border-[#F3B489] bg-[#33271E] text-left shadow-[0_18px_50px_-34px_rgba(51,39,30,0.45)] transition hover:-translate-y-1 hover:border-[#A92B10] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#33271E] ${
+                          isFeatured
+                            ? 'col-span-2 row-span-2 min-h-[612px] max-lg:col-span-2 max-sm:col-span-1 max-sm:row-span-1 max-sm:min-h-[410px]'
+                            : 'min-h-[296px] max-sm:min-h-[350px]'
+                        }`}
+                      >
+                        <img
+                          src={recommendation.image}
+                          alt=""
+                          onError={(event) => {
+                            event.currentTarget.hidden = true
+                          }}
+                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1F1A17]/88 via-[#1F1A17]/28 to-transparent" />
+                        <div className="relative z-10 flex h-full min-h-[inherit] flex-col justify-between gap-5 p-7 text-white max-sm:p-5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-[5px] border border-white/70 bg-white/90 px-3 py-1 text-[12px] font-black text-[#33271E]">
+                              {recommendation.badge}
+                            </span>
+                            {isCurrentRecommendation ? (
+                              <span className="rounded-[5px] border border-[#F36B12] bg-[#F36B12] px-3 py-1 text-[12px] font-black text-[#33271E]">
+                                현재 기준
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div>
+                            <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-white/80">
+                              {recommendation.preference.cityPair}
+                            </p>
+                            <h3
+                              className={`mt-2 break-keep font-black tracking-normal ${
+                                isFeatured
+                                  ? 'text-[34px] leading-10 max-sm:text-[28px] max-sm:leading-9'
+                                  : 'text-[21px] leading-7'
+                              }`}
+                            >
+                              {recommendation.title}
+                            </h3>
+                            <p className="mt-3 line-clamp-2 break-keep text-sm font-semibold leading-6 text-white/90">
+                              {recommendation.summary}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {recommendation.themes.map((theme) => (
+                                <span
+                                  key={`${recommendation.id}-${theme}`}
+                                  className="rounded-[5px] border border-white/60 bg-white/18 px-3 py-1 text-[12px] font-bold text-white backdrop-blur"
+                                >
+                                  #{theme}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
 
@@ -1719,6 +2447,8 @@ function App() {
                 </button>
               </div>
             </>
+          ) : activeView === 'themeDetail' ? (
+            renderThemeDetailView()
           ) : activeView === 'planDetail' ? (
             renderPlanDetailView()
           ) : activeView === 'mypage' ? (
@@ -1848,7 +2578,7 @@ function App() {
               aria-labelledby="chat-title"
               className="mx-auto min-h-dvh max-w-[1440px] px-16 pb-16 pt-28 max-lg:px-8 max-sm:px-5"
             >
-              <div data-testid="chat-workspace" className="space-y-6">
+              <div data-testid="chat-workspace" className="space-y-5">
                 <button
                   type="button"
                   onClick={goHome}
@@ -1856,169 +2586,19 @@ function App() {
                 >
                   ← 이전으로 돌아가기
                 </button>
-                <section
-                  aria-label="AI 일정 챗봇 요약"
-                  data-testid="chat-planner-summary"
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)] gap-5 rounded-[18px] border border-[#F3B489] bg-[#fffffa] p-6 shadow-[0_12px_28px_-14px_rgba(33,46,33,0.14)] max-lg:grid-cols-1"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#33271E]">Lovv AI Planner</p>
-                    <h2
-                      id="chat-title"
-                      className="mt-3 break-keep text-[30px] font-bold leading-9 text-[#33271E] max-sm:text-2xl max-sm:leading-8"
-                    >
-                      AI 일정 챗봇
-                    </h2>
-                    <p className="mt-4 break-keep text-sm leading-6 text-[#33271E]">
-                      {selectedPreference.cityPair} 감성을 기준으로 축제 포함 여부와 여행 기간을 먼저 정리합니다.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-                    {plannerSummaryCards.map((item) => (
-                      <div
-                        key={item.title}
-                        className="rounded-[14px] border border-[#F3B489] bg-[#FFF0E4] px-4 py-3 text-[#33271E]"
-                      >
-                        <p className="text-sm font-black leading-5">{item.title}</p>
-                        <p className="mt-2 line-clamp-2 break-keep text-[12px] font-semibold leading-5">
-                          {item.body}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {item.chips.slice(0, 2).map((chip) => (
-                            <span
-                              key={chip}
-                              className="inline-flex min-h-7 items-center rounded-full border border-[#F3B489] bg-[#fffffa] px-2.5 py-0.5 text-[11px] font-black leading-4"
-                            >
-                              {chip}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                {renderPlannerStateHeader()}
                 <div
                   data-testid="chat-top-grid"
-                  className="grid min-h-[660px] grid-cols-[minmax(0,0.92fr)_minmax(360px,0.82fr)] items-start gap-6 max-lg:grid-cols-1"
+                  className="grid min-h-[660px] grid-cols-[minmax(0,0.96fr)_minmax(360px,0.82fr)] items-start gap-6 max-xl:grid-cols-1"
                 >
-                  <div className="flex min-h-[660px] flex-col rounded-[18px] border border-[#F3B489] bg-[#fffffa] shadow-[0_12px_28px_-14px_rgba(33,46,33,0.14)]">
-                    <div className="border-b border-[#F3B489] px-6 py-5">
-                      <p className="text-sm font-semibold text-[#33271E]">AI 일정 짜기</p>
-                      <h3 className="mt-2 break-keep text-2xl font-bold leading-8 text-[#33271E] max-sm:text-xl max-sm:leading-7">
-                        여행 조건을 대화로 정리하기
-                      </h3>
-                    </div>
-                    <div
-                      role="log"
-                      aria-label="AI 일정 대화"
-                      className="flex-1 space-y-4 px-6 py-6"
-                    >
-                      {chatMessages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`max-w-[560px] break-keep rounded-[18px] border px-5 py-4 text-sm leading-6 text-[#33271E] max-sm:text-[13px] max-sm:leading-6 ${
-                            message.role === 'assistant'
-                              ? 'border-[#F3B489] bg-[#FFF0E4]'
-                              : 'ml-auto border-[#A92B10] bg-[#F36B12] font-semibold'
-                          }`}
-                        >
-                          {message.content}
-                        </div>
-                      ))}
-
-                      {shouldShowFestivalPrompt ? (
-                        <div className="max-w-[560px] space-y-3">
-                          <div className="inline-flex max-w-full rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] px-5 py-4 text-sm font-bold leading-6 text-[#33271E] max-sm:text-[13px] max-sm:leading-6">
-                            축제 테마를 일정에 포함할까요?
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {festivalThemePrompts.map((prompt) => {
-                              const isSelected = festivalThemeChoice === prompt.choice
-
-                              return (
-                                <button
-                                  key={prompt.choice}
-                                  type="button"
-                                  aria-pressed={isSelected}
-                                  onClick={() => submitChatMessage(prompt.label)}
-                                  className={`inline-flex min-h-[36px] items-center rounded-full border px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
-                                    isSelected
-                                      ? 'border-[#A92B10] bg-[#F36B12]'
-                                      : 'border-[#F3B489] bg-[#FFF0E4]'
-                                  }`}
-                                >
-                                  {prompt.label}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {shouldShowDurationPrompt ? (
-                        <div className="max-w-[680px] space-y-3">
-                          <div className="inline-flex max-w-full rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] px-5 py-4 text-sm font-bold leading-6 text-[#33271E] max-sm:text-[13px] max-sm:leading-6">
-                            일정 기간을 먼저 골라주세요
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {durationGuidePrompts.map((prompt) => (
-                              <button
-                                key={prompt}
-                                type="button"
-                                onClick={() => submitChatMessage(prompt)}
-                                className="inline-flex min-h-[36px] items-center rounded-full border border-[#F3B489] bg-[#FFF0E4] px-4 py-1 text-[12px] font-bold leading-4 text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                              >
-                                {prompt}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {isPlannerReady ? (
-                        <div className="rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] p-5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-[#F3B489] bg-[#fffffa] px-3 py-1 text-[12px] font-bold text-[#33271E]">
-                              일정 초안
-                            </span>
-                            <span className="rounded-full border border-[#F3B489] bg-[#FFF0E4] px-3 py-1 text-[12px] font-bold text-[#33271E]">
-                              {planDraft.durationLabel}
-                            </span>
-                            <span className="rounded-full border border-[#F3B489] bg-[#FFF0E4] px-3 py-1 text-[12px] font-bold text-[#33271E]">
-                              {planDraft.intensityLabel} 반영
-                            </span>
-                          </div>
-                          <p className="mt-3 break-keep text-sm font-semibold leading-6 text-[#33271E] max-sm:text-[13px]">
-                            하단 일정 상세에 반영했어요. 시간대별 동선과 추천 이유를 이어서 확인해 주세요.
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="border-t border-[#F3B489] p-5">
-                      <form onSubmit={submitChatForm} className="grid grid-cols-[1fr_auto] gap-3 max-sm:grid-cols-1">
-                        <input
-                          aria-label="여행 조건 입력"
-                          value={chatInput}
-                          onChange={(event) => setChatInput(event.target.value)}
-                          placeholder="동행, 관심사, 걷는 정도를 추가로 입력해 주세요"
-                          className="min-h-12 min-w-0 rounded-full border border-[#F3B489] bg-[#FFF0E4] px-5 py-2 break-keep text-sm leading-5 text-[#33271E] outline-none transition placeholder:text-[#33271E] focus:border-[#33271E] focus:bg-[#fffffa] max-sm:text-[13px]"
-                        />
-                        <button
-                          type="submit"
-                          aria-label="메시지 보내기"
-                          disabled={!chatInput.trim()}
-                          className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#A92B10] bg-[#F36B12] px-6 text-sm font-bold text-[#33271E] transition hover:border-[#A92B10] hover:bg-[#FF8A2A] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-[#A92B10] disabled:hover:bg-[#F36B12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
-                        >
-                          보내기
-                        </button>
-                      </form>
-                    </div>
-                  </div>
+                  {renderChatConversationPanel()}
                   {renderItineraryPanel()}
                 </div>
               </div>
             </section>
           )}
+
+          {renderFooter()}
         </>
         )}
       </div>
