@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { smallCities, smallCityCounts } from './data/smallCities'
 
 const authStorageKey = 'lovv.auth.user'
 
@@ -142,6 +143,7 @@ describe('MVP main entry screen', () => {
     expect(Boolean(proofHeading.compareDocumentPosition(monthlyHeading) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
       true,
     )
+    expect(screen.getByRole('heading', { name: '내가 가고 싶은 소도시 찾아보기' })).toBeInTheDocument()
     const monthlyGrid = screen.getByTestId('monthly-recommendation-grid')
 
     expect(monthlyGrid).toHaveClass('grid-cols-4')
@@ -155,6 +157,15 @@ describe('MVP main entry screen', () => {
     ].forEach((buttonName) => {
       expect(within(monthlyGrid).getByRole('button', { name: buttonName })).toBeInTheDocument()
     })
+    const cityMapSection = screen.getByTestId('city-map-discovery-section')
+    expect(
+      Boolean(monthlyGrid.compareDocumentPosition(cityMapSection) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true)
+    expect(within(cityMapSection).getByText('한국 40곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '40')
+    expect(cityMapSection.querySelector('.leaflet-control-attribution')).toHaveTextContent(
+      'OpenStreetMap contributors',
+    )
     expect(screen.getByRole('button', { name: '빠른 이동 메뉴 열기' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '여행지 찾아보기' })).toHaveAttribute(
       'href',
@@ -185,6 +196,115 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText(/부산 · 오키나와 감성을 기준으로/)).toBeInTheDocument()
     expect(screen.getByRole('log', { name: 'AI 일정 대화' })).toHaveTextContent('부산 · 오키나와 감성')
     expect(screen.queryByRole('heading', { name: '소도시 지도 프리뷰' })).not.toBeInTheDocument()
+  })
+
+  it('renders the small-city map fixture corpus and country switcher', () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    expect(smallCityCounts.KR).toBe(40)
+    expect(smallCityCounts.JP).toBe(360)
+    expect(smallCities).toHaveLength(400)
+    expect(
+      smallCities
+        .filter((city) => city.country === 'JP')
+        .some((city) => /\s(해안|온천|구시가|축제|공예|숲길|시장|산책)$/.test(city.nameKo)),
+    ).toBe(false)
+
+    const cityMapSection = screen.getByTestId('city-map-discovery-section')
+
+    expect(within(cityMapSection).getByRole('heading', { name: '내가 가고 싶은 소도시 찾아보기' })).toBeInTheDocument()
+    expect(within(cityMapSection).getByRole('button', { name: '한국' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(cityMapSection).getByText('한국 40곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '40')
+    expect(within(screen.getByTestId('city-map-result-list')).getAllByRole('button')).toHaveLength(40)
+    expect(cityMapSection.querySelector('.leaflet-control-attribution')).toHaveTextContent(
+      'OpenStreetMap contributors',
+    )
+
+    fireEvent.click(within(cityMapSection).getByRole('button', { name: '일본' }))
+
+    expect(within(cityMapSection).getByRole('button', { name: '일본' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(cityMapSection).getByText('일본 40곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '40')
+    expect(within(screen.getByTestId('city-map-result-list')).getAllByRole('button')).toHaveLength(40)
+    expect(within(cityMapSection).getByText(/내부 후보 데이터 360건을 도시명 기준으로 묶어/)).toBeInTheDocument()
+    expect(within(screen.getByTestId('city-map-result-list')).getAllByRole('button', { name: /오타루/ })).toHaveLength(1)
+
+    fireEvent.change(within(cityMapSection).getByPlaceholderText('도시, 지역, 테마 검색'), {
+      target: { value: '시만토 시장' },
+    })
+
+    expect(within(cityMapSection).getByText('일본 1곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '1')
+    expect(within(screen.getByTestId('city-map-result-list')).getByRole('button', { name: /시만토/ })).toBeInTheDocument()
+    expect(within(screen.getByTestId('city-map-result-list')).queryByRole('button', { name: /시만토 시장/ })).not.toBeInTheDocument()
+
+    fireEvent.click(within(screen.getByTestId('city-map-result-list')).getByRole('button', { name: /시만토/ }))
+
+    expect(within(cityMapSection).getByTestId('city-map-detail-panel')).toHaveTextContent('시만토')
+    expect(within(cityMapSection).getByTestId('city-map-detail-panel')).toHaveTextContent('시만토 시장 거리')
+  })
+
+  it('filters small-city markers by search and theme with an empty state', () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    const cityMapSection = screen.getByTestId('city-map-discovery-section')
+    const searchInput = within(cityMapSection).getByPlaceholderText('도시, 지역, 테마 검색')
+
+    fireEvent.change(searchInput, { target: { value: '남해' } })
+
+    expect(within(cityMapSection).getByText('한국 1곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '1')
+    expect(within(cityMapSection).getByTestId('city-map-detail-panel')).toHaveTextContent('남해')
+
+    fireEvent.click(within(cityMapSection).getByRole('button', { name: '#온천' }))
+
+    expect(within(cityMapSection).getByText('한국 0곳 / 전체 40곳')).toBeInTheDocument()
+    expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '0')
+    expect(within(cityMapSection).getByText('조건에 맞는 소도시가 없습니다.')).toBeInTheDocument()
+
+    fireEvent.click(within(cityMapSection).getByRole('button', { name: '필터 초기화' }))
+
+    expect(within(cityMapSection).getByText('한국 40곳 / 전체 40곳')).toBeInTheDocument()
+  })
+
+  it('opens the AI planner from a selected map city without mutating the stored preference', () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    const cityMapSection = screen.getByTestId('city-map-discovery-section')
+    const searchInput = within(cityMapSection).getByPlaceholderText('도시, 지역, 테마 검색')
+    const storedPreferenceBefore = localStorage.getItem('lovv.preference')
+
+    fireEvent.change(searchInput, { target: { value: '남해' } })
+    fireEvent.click(
+      within(screen.getByTestId('city-map-result-list')).getByRole('button', {
+        name: /남해/,
+      }),
+    )
+
+    const cityDetailPanel = within(cityMapSection).getByTestId('city-map-detail-panel')
+    expect(cityDetailPanel).toHaveTextContent('남해')
+    expect(cityDetailPanel).toHaveTextContent('독일마을 · 다랭이마을 · 상주은모래비치')
+
+    fireEvent.click(within(cityDetailPanel).getByRole('button', { name: '이 소도시로 AI 일정 짜기' }))
+
+    expect(localStorage.getItem('lovv.preference')).toBe(storedPreferenceBefore)
+    expect(screen.getByRole('heading', { name: 'AI 일정 챗봇' })).toBeInTheDocument()
+    expect(screen.getByTestId('chat-planner-summary')).toHaveTextContent('남해 상세 정보를 기준으로')
+    expect(screen.getByRole('log', { name: 'AI 일정 대화' })).toHaveTextContent('남해로 세부 일정을 짜고 싶어요.')
+
+    fireEvent.click(screen.getByRole('button', { name: '축제 포함' }))
+    fireEvent.click(screen.getByRole('button', { name: '1박 2일' }))
+
+    expect(screen.getByText(/남해 중심으로 1박 2일 흐름을 잡아볼게요/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '생성된 일정 상세' })).toBeInTheDocument()
+    expect(screen.getByText(/남해 · 경남 1박 2일 초안/)).toBeInTheDocument()
   })
 
   it('rotates the main hero theme every 10 seconds with theme-specific slogan styling', () => {

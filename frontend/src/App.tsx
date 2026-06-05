@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import logoImage from './assets/lovv-logo.png'
 import foxFaceImage from './assets/foxhead-smile.png'
 import beppuImage from './assets/cities/beppu.jpg'
@@ -14,6 +14,19 @@ import nikkoImage from './assets/cities/nikko.jpg'
 import okinawaImage from './assets/cities/okinawa.jpg'
 import onyangImage from './assets/cities/onyang.jpg'
 import osakaImage from './assets/cities/osaka.jpg'
+import { SmallCityLeafletMap } from './components/SmallCityLeafletMap'
+import {
+  createPlannerCityContext,
+  filterSmallCities,
+  getSmallCityMapCities,
+  getSmallCitiesByCountry,
+  smallCityCountryOptions,
+  smallCityThemes,
+  type PlannerCityContext,
+  type SmallCity,
+  type SmallCityCountry,
+  type SmallCityTheme,
+} from './data/smallCities'
 
 type CityCoverImage = {
   city: string
@@ -549,16 +562,26 @@ const createPlanDraft = (
   preference: Preference,
   message = '',
   festivalThemeChoice: FestivalThemeChoice = 'undecided',
+  cityContext: PlannerCityContext | null = null,
 ): PlanDraft => {
   const durationLabel = getDurationLabel(message)
   const dayCount = getDurationDayCount(durationLabel)
   const isLessWalking = wantsLessWalking(message)
-  const isArtFocused = preference.tag === '예술' || /전시|편집숍|쇼핑|예술/.test(message)
+  const cityThemeText = cityContext?.themes.join('·') ?? ''
+  const isArtFocused =
+    preference.tag === '예술' || /전시|편집숍|쇼핑|예술/.test(`${message} ${cityThemeText}`)
   const intensityLabel = isLessWalking ? '덜 걷는 일정' : '동선이 느슨한 일정'
-  const baseSummary = isArtFocused
-    ? '전시와 편집숍 사이 이동을 줄이는 쪽으로, 저녁에는 동네 산책보다 휴식 여백을 먼저 둡니다.'
-    : `${preference.routeHint} 흐름을 기준으로 이동 부담을 낮추고, ${preference.tag} 취향이 잘 보이는 장면을 앞에 둡니다.`
+  const cityRouteSeed = cityContext?.routeSeed ?? []
+  const cityRouteText = cityRouteSeed.slice(0, 3).join(' · ')
+  const baseSummary = cityContext
+    ? `${cityContext.countryLabel} ${cityContext.region}의 ${cityContext.cityName}에서 ${cityRouteText} 흐름을 우선하고, ${cityThemeText} 테마가 보이는 장면을 앞에 둡니다.`
+    : isArtFocused
+      ? '전시와 편집숍 사이 이동을 줄이는 쪽으로, 저녁에는 동네 산책보다 휴식 여백을 먼저 둡니다.'
+      : `${preference.routeHint} 흐름을 기준으로 이동 부담을 낮추고, ${preference.tag} 취향이 잘 보이는 장면을 앞에 둡니다.`
   const festivalThemeSummary = getFestivalThemeSummary(festivalThemeChoice)
+  const firstRoute = cityRouteSeed[0] ?? preference.routeHint
+  const middleRoute = cityRouteSeed.slice(1).join(' · ') || preference.description
+  const lastRoute = cityRouteSeed[2] ?? preference.editorialNote
 
   return {
     durationLabel,
@@ -571,54 +594,94 @@ const createPlanDraft = (
         time: '오전',
         move: isLessWalking ? '12분' : '18분',
         title: isLessWalking ? '가볍게 도착하고 가까운 동네부터 보기' : '가볍게 도착하고 동네 감 잡기',
-        body: preference.routeHint,
-        reason: '첫 장소는 걷는 부담보다 여행 분위기를 잡는 데 집중합니다.',
+        body: firstRoute,
+        reason: cityContext
+          ? '선택한 소도시의 첫 동선 단서를 기준으로 여행 분위기를 빠르게 잡습니다.'
+          : '첫 장소는 걷는 부담보다 여행 분위기를 잡는 데 집중합니다.',
       },
       {
         time: '오후',
         move: isLessWalking ? '16분' : '24분',
         title: isArtFocused ? '전시와 편집숍을 한 동선 안에 묶기' : '취향에 맞는 핵심 장소 둘러보기',
-        body: isArtFocused ? '전시 공간 · 편집숍 · 쉬어가는 카페를 한 구역에 묶어 봅니다.' : preference.description,
-        reason: isArtFocused
-          ? '선택한 예술 취향이 가장 잘 드러나는 장소를 이동이 짧은 순서로 배치합니다.'
-          : '선택한 취향이 가장 잘 드러나는 장소를 중간에 배치합니다.',
+        body: cityContext
+          ? middleRoute
+          : isArtFocused
+            ? '전시 공간 · 편집숍 · 쉬어가는 카페를 한 구역에 묶어 봅니다.'
+            : preference.description,
+        reason: cityContext
+          ? '상세 패널에서 고른 소도시의 route seed를 오후 핵심 동선으로 이어갑니다.'
+          : isArtFocused
+            ? '선택한 예술 취향이 가장 잘 드러나는 장소를 이동이 짧은 순서로 배치합니다.'
+            : '선택한 취향이 가장 잘 드러나는 장소를 중간에 배치합니다.',
       },
       {
         time: '저녁',
         move: isLessWalking ? '10분' : '15분',
         title: '무리하지 않는 마무리 동선',
-        body: preference.editorialNote,
+        body: lastRoute,
         reason: '마지막에는 이동을 줄이고 쉬어갈 수 있는 여백을 둡니다.',
       },
     ],
   }
 }
 
-const createInitialChatMessages = (preference: Preference): ChatMessage[] => [
+const createInitialChatMessages = (
+  preference: Preference,
+  cityContext: PlannerCityContext | null = null,
+): ChatMessage[] => [
   {
     id: createMessageId('assistant', 0),
     role: 'assistant',
-    content: `${preference.cityPair} 감성에 맞춰 시작할게요. 먼저 축제를 일정 테마에 포함할까요?`,
+    content: cityContext
+      ? `${cityContext.cityName}(${cityContext.countryLabel} ${cityContext.region})를 기준으로 시작할게요. 먼저 축제를 일정 테마에 포함할까요?`
+      : `${preference.cityPair} 감성에 맞춰 시작할게요. 먼저 축제를 일정 테마에 포함할까요?`,
   },
   {
     id: createMessageId('user', 1),
     role: 'user',
-    content: '대화로 먼저 여행 조건을 좁혀보고 싶어요.',
+    content: cityContext
+      ? `${cityContext.cityName}로 세부 일정을 짜고 싶어요.`
+      : '대화로 먼저 여행 조건을 좁혀보고 싶어요.',
   },
 ]
 
-const createAssistantReply = (preference: Preference, draft: PlanDraft) =>
-  `${preference.cityPair} 감성으로 ${draft.durationLabel} 흐름을 잡아볼게요. ${draft.intensityLabel}으로 ${preference.tag} 취향이 가장 잘 보이는 시간대를 먼저 배치했습니다.`
+const createAssistantReply = (
+  preference: Preference,
+  draft: PlanDraft,
+  cityContext: PlannerCityContext | null = null,
+) =>
+  cityContext
+    ? `${cityContext.cityName} 중심으로 ${draft.durationLabel} 흐름을 잡아볼게요. ${draft.intensityLabel}으로 ${cityContext.themes.slice(0, 2).join('·')} 장면이 잘 보이는 시간대를 먼저 배치했습니다.`
+    : `${preference.cityPair} 감성으로 ${draft.durationLabel} 흐름을 잡아볼게요. ${draft.intensityLabel}으로 ${preference.tag} 취향이 가장 잘 보이는 시간대를 먼저 배치했습니다.`
 
-const createPlanId = (preference: Preference, draft: PlanDraft, festivalThemeChoice: FestivalThemeChoice) =>
+const createPlanId = (
+  preference: Preference,
+  draft: PlanDraft,
+  festivalThemeChoice: FestivalThemeChoice,
+  cityContext: PlannerCityContext | null = null,
+) =>
   [
+    cityContext?.cityId,
     preference.cityPair,
     draft.durationLabel,
     getFestivalThemeLabel(festivalThemeChoice),
     draft.intensityLabel,
   ]
+    .filter(Boolean)
     .join('-')
     .replace(/\s+/g, '-')
+
+const getPlannerCitySeedText = (cityContext: PlannerCityContext | null) =>
+  cityContext
+    ? [
+        cityContext.cityName,
+        cityContext.countryLabel,
+        cityContext.region,
+        cityContext.summary,
+        ...cityContext.themes,
+        ...cityContext.routeSeed,
+      ].join(' ')
+    : ''
 
 const getThemeHashtags = (preference: Preference) => [
   ...preference.coverImages.map((coverImage) => `#${coverImage.city.replace('/', '')}`),
@@ -674,10 +737,19 @@ function App() {
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => readStoredSavedPlans())
   const [likedPlanIds, setLikedPlanIds] = useState<string[]>(() => readStoredLikedPlanIds())
   const [plannerContextText, setPlannerContextText] = useState('')
+  const [plannerCityContext, setPlannerCityContext] = useState<PlannerCityContext | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
     createInitialChatMessages(selectedPreference),
   )
   const [planDraft, setPlanDraft] = useState<PlanDraft>(() => createPlanDraft(selectedPreference))
+  const [cityMapCountry, setCityMapCountry] = useState<SmallCityCountry>('KR')
+  const [cityMapQuery, setCityMapQuery] = useState('')
+  const [selectedSmallCityThemes, setSelectedSmallCityThemes] = useState<SmallCityTheme[]>([])
+  const [selectedSmallCityId, setSelectedSmallCityId] = useState(() => {
+    const firstKoreanCity = getSmallCitiesByCountry('KR')[0]
+
+    return firstKoreanCity?.id ?? ''
+  })
   const [currentHeroThemeIndex, setCurrentHeroThemeIndex] = useState(0)
   const isPreferenceEditView = activeView === 'preferenceEdit'
   const preferenceSelection = isPreferenceEditView ? pendingPreference : selectedPreference
@@ -689,10 +761,48 @@ function App() {
   const shouldShowFestivalPrompt = festivalThemeChoice === 'undecided'
   const shouldShowDurationPrompt = !shouldShowFestivalPrompt && selectedDurationLabel === null
   const isPlannerReady = festivalThemeChoice !== 'undecided' && selectedDurationLabel !== null
-  const currentPlanId = createPlanId(selectedPreference, planDraft, festivalThemeChoice)
-  const currentPlanTitle = `${selectedPreference.cityPair} 감성 ${planDraft.durationLabel} 초안`
+  const plannerBasisLabel = plannerCityContext
+    ? `${plannerCityContext.cityName} · ${plannerCityContext.region}`
+    : selectedPreference.cityPair
+  const currentPlanId = createPlanId(selectedPreference, planDraft, festivalThemeChoice, plannerCityContext)
+  const currentPlanTitle = plannerCityContext
+    ? `${plannerBasisLabel} ${planDraft.durationLabel} 초안`
+    : `${plannerBasisLabel} 감성 ${planDraft.durationLabel} 초안`
   const isCurrentPlanSaved = savedPlans.some((plan) => plan.id === currentPlanId)
   const isCurrentPlanLiked = likedPlanIds.includes(currentPlanId)
+  const activeCountrySmallCities = useMemo(
+    () => getSmallCitiesByCountry(cityMapCountry),
+    [cityMapCountry],
+  )
+  const filteredSmallCities = useMemo(
+    () => filterSmallCities(activeCountrySmallCities, cityMapQuery, selectedSmallCityThemes),
+    [activeCountrySmallCities, cityMapQuery, selectedSmallCityThemes],
+  )
+  const activeCountryMapCities = useMemo(
+    () => getSmallCityMapCities(activeCountrySmallCities),
+    [activeCountrySmallCities],
+  )
+  const visibleSmallCityMarkers = useMemo(
+    () => getSmallCityMapCities(filteredSmallCities),
+    [filteredSmallCities],
+  )
+  const selectedSmallCity = useMemo(() => {
+    if (visibleSmallCityMarkers.length === 0) {
+      return null
+    }
+
+    return (
+      visibleSmallCityMarkers.find((city) => city.id === selectedSmallCityId) ??
+      visibleSmallCityMarkers[0]
+    )
+  }, [visibleSmallCityMarkers, selectedSmallCityId])
+  const selectedCountryOption =
+    smallCityCountryOptions.find((option) => option.country === cityMapCountry) ??
+    smallCityCountryOptions[0]
+  const activeCountryTotalCount = activeCountryMapCities.length
+  const plannerStateCityChips = plannerCityContext
+    ? [plannerCityContext.cityName, plannerCityContext.region]
+    : selectedPreference.coverImages.slice(0, 2).map((coverImage) => coverImage.city)
   const plannerStateSteps: {
     id: string
     label: string
@@ -706,7 +816,9 @@ function App() {
       label: '취향 반영',
       status: 'completed',
       statusLabel: '완료',
-      body: `${selectedPreference.cityPair} 감성으로 시작합니다.`,
+      body: plannerCityContext
+        ? `${selectedPreference.cityPair} 취향은 유지하고 선택한 소도시를 일정 출발점으로 사용합니다.`
+        : `${selectedPreference.cityPair} 감성으로 시작합니다.`,
       chips: [`#${selectedPreference.tag.split('·')[0]}`, selectedPreference.signals[0] ?? selectedPreference.weakSignal],
     },
     {
@@ -714,8 +826,10 @@ function App() {
       label: '후보 탐색',
       status: festivalThemeChoice === 'undecided' ? 'active' : 'completed',
       statusLabel: festivalThemeChoice === 'undecided' ? '진행 중' : '완료',
-      body: '선택한 분위기와 가까운 한국·일본 소도시 후보를 좁히고 있어요.',
-      chips: selectedPreference.coverImages.slice(0, 2).map((coverImage) => coverImage.city),
+      body: plannerCityContext
+        ? `${plannerCityContext.countryLabel} ${plannerCityContext.region}의 ${plannerCityContext.cityName} 상세 정보를 기준 후보로 고정했습니다.`
+        : '선택한 분위기와 가까운 한국·일본 소도시 후보를 좁히고 있어요.',
+      chips: plannerStateCityChips,
     },
     {
       id: 'schedule',
@@ -745,13 +859,19 @@ function App() {
     }
   }, [])
 
-  const resetPlannerFlow = (preference = selectedPreference) => {
+  const resetPlannerFlow = (
+    preference = selectedPreference,
+    cityContext: PlannerCityContext | null = plannerCityContext,
+  ) => {
+    const nextPlannerContextText = getPlannerCitySeedText(cityContext)
+
     setChatInput('')
     setFestivalThemeChoice('undecided')
     setSelectedDurationLabel(null)
-    setPlannerContextText('')
-    setChatMessages(createInitialChatMessages(preference))
-    setPlanDraft(createPlanDraft(preference))
+    setPlannerCityContext(cityContext)
+    setPlannerContextText(nextPlannerContextText)
+    setChatMessages(createInitialChatMessages(preference, cityContext))
+    setPlanDraft(createPlanDraft(preference, nextPlannerContextText, 'undecided', cityContext))
     setSavedPlanNotice(null)
   }
 
@@ -765,8 +885,8 @@ function App() {
       id: currentPlanId,
       ownerId: currentUser?.id ?? 'mock-user',
       title: currentPlanTitle,
-      cityPair: selectedPreference.cityPair,
-      themeTag: selectedPreference.tag,
+      cityPair: plannerBasisLabel,
+      themeTag: plannerCityContext?.themes.join('·') ?? selectedPreference.tag,
       durationLabel: planDraft.durationLabel,
       festivalThemeLabel: planDraft.festivalThemeLabel,
       intensityLabel: planDraft.intensityLabel,
@@ -873,7 +993,7 @@ function App() {
   const openChat = (event?: React.MouseEvent<HTMLElement>) => {
     event?.preventDefault()
     setIsSessionMenuOpen(false)
-    resetPlannerFlow()
+    resetPlannerFlow(selectedPreference, null)
     setActiveView('chat')
   }
 
@@ -910,7 +1030,40 @@ function App() {
   const openMonthlyRecommendationPlan = (preference: Preference) => {
     storePreference(preference)
     setSelectedPreference(preference)
-    resetPlannerFlow(preference)
+    resetPlannerFlow(preference, null)
+    setIsQuickActionsOpen(false)
+    setActiveView('chat')
+  }
+
+  const selectCityMapCountry = (country: SmallCityCountry) => {
+    const nextCountryCities = getSmallCityMapCities(getSmallCitiesByCountry(country))
+
+    setCityMapCountry(country)
+    setSelectedSmallCityId(nextCountryCities[0]?.id ?? '')
+  }
+
+  const toggleSmallCityThemeFilter = (theme: SmallCityTheme) => {
+    setSelectedSmallCityThemes((currentThemes) =>
+      currentThemes.includes(theme)
+        ? currentThemes.filter((currentTheme) => currentTheme !== theme)
+        : [...currentThemes, theme],
+    )
+  }
+
+  const clearSmallCityFilters = () => {
+    setCityMapQuery('')
+    setSelectedSmallCityThemes([])
+    setSelectedSmallCityId(activeCountryMapCities[0]?.id ?? '')
+  }
+
+  const selectSmallCity = (city: SmallCity) => {
+    setSelectedSmallCityId(city.id)
+  }
+
+  const openSmallCityPlanner = (city: SmallCity) => {
+    const cityContext = createPlannerCityContext(city)
+
+    resetPlannerFlow(selectedPreference, cityContext)
     setIsQuickActionsOpen(false)
     setActiveView('chat')
   }
@@ -923,7 +1076,7 @@ function App() {
   const savePreferenceEdit = () => {
     storePreference(pendingPreference)
     setSelectedPreference(pendingPreference)
-    resetPlannerFlow(pendingPreference)
+    resetPlannerFlow(pendingPreference, null)
     setCoverImageIndex(0)
     setHasSelectedCover(false)
     setPreferenceNotice('취향이 변경됐어요. 다음 AI 일정부터 반영됩니다.')
@@ -961,7 +1114,12 @@ function App() {
       : nextSelectedDurationLabel
         ? `${nextSelectedDurationLabel} ${nextPlannerContextText}`
         : nextPlannerContextText
-    const nextDraft = createPlanDraft(selectedPreference, draftMessage, nextFestivalThemeChoice)
+    const nextDraft = createPlanDraft(
+      selectedPreference,
+      draftMessage,
+      nextFestivalThemeChoice,
+      plannerCityContext,
+    )
     const didChooseFestivalTheme = nextFestivalThemeChoice !== festivalThemeChoice
     const assistantContent =
       didChooseFestivalTheme && nextSelectedDurationLabel === null
@@ -970,7 +1128,7 @@ function App() {
           ? nextSelectedDurationLabel
             ? `${nextSelectedDurationLabel} 흐름은 반영했어요. 축제 테마를 일정에 포함할지도 알려주세요.`
             : '좋아요. 먼저 축제 테마 포함 여부와 여행 기간을 차례로 좁혀볼게요.'
-          : createAssistantReply(selectedPreference, nextDraft)
+          : createAssistantReply(selectedPreference, nextDraft, plannerCityContext)
 
     setChatMessages((currentMessages) => [
       ...currentMessages,
@@ -1014,7 +1172,9 @@ function App() {
             AI 일정 챗봇
           </h2>
           <p className="mt-4 break-keep text-sm leading-6 text-[#33271E]">
-            {selectedPreference.cityPair} 감성을 기준으로 축제 포함 여부와 여행 기간을 먼저 정리합니다.
+            {plannerCityContext
+              ? `${plannerCityContext.cityName} 상세 정보를 기준으로 축제 포함 여부와 여행 기간을 먼저 정리합니다.`
+              : `${selectedPreference.cityPair} 감성을 기준으로 축제 포함 여부와 여행 기간을 먼저 정리합니다.`}
           </p>
         </div>
 
@@ -1060,7 +1220,9 @@ function App() {
         <div className="rounded-[14px] border border-[#F3B489] bg-[#FFF8F6] p-5">
           <p className="text-[12px] font-black uppercase tracking-[0.12em] text-[#A92B10]">AI Tip</p>
           <p className="mt-3 break-keep text-sm font-semibold leading-6 text-[#33271E]">
-            취향, 기간, 축제 포함 여부를 먼저 정리하면 일정 초안의 이동 강도와 추천 이유가 더 분명해집니다.
+            {plannerCityContext
+              ? `${plannerCityContext.cityName}의 첫 동선 단서를 유지한 채 기간과 축제 조건만 좁힙니다.`
+              : '취향, 기간, 축제 포함 여부를 먼저 정리하면 일정 초안의 이동 강도와 추천 이유가 더 분명해집니다.'}
           </p>
         </div>
       </div>
@@ -1296,7 +1458,9 @@ function App() {
           <div className="mt-5 grid grid-cols-2 gap-3 max-md:grid-cols-1">
             {[
               planDraft.intensityLabel,
-              `${selectedPreference.tag} 중심`,
+              plannerCityContext
+                ? `${plannerCityContext.cityName} 중심`
+                : `${selectedPreference.tag} 중심`,
               `${planDraft.festivalThemeLabel} 반영`,
               selectedPreference.weakSignal,
             ].map((item) => (
@@ -1437,6 +1601,323 @@ function App() {
               {savedPlanNotice}
             </p>
           ) : null}
+        </div>
+      </section>
+    )
+  }
+
+  const renderCityMapDiscoverySection = () => {
+    const hasActiveFilters = cityMapQuery.trim().length > 0 || selectedSmallCityThemes.length > 0
+
+    return (
+      <section
+        id="city-map-discovery"
+        data-testid="city-map-discovery-section"
+        aria-labelledby="city-map-discovery-title"
+        className="mx-auto max-w-[1440px] px-[55px] pb-14 max-sm:px-5"
+      >
+        <div className="overflow-hidden rounded-[24px] border border-[#F3B489] bg-white/82 shadow-[0_18px_48px_-34px_rgba(51,39,30,0.28)]">
+          <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(360px,0.45fr)] gap-0 max-xl:grid-cols-1">
+            <div className="min-w-0 border-r border-[#F3B489] p-8 max-xl:border-r-0 max-xl:border-b max-sm:p-5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-6 max-lg:grid-cols-1">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#F36B12]">
+                    Small city map
+                  </p>
+                  <h2
+                    id="city-map-discovery-title"
+                    className="mt-3 break-keep text-[34px] font-black leading-10 text-[#33271E] max-sm:text-[28px] max-sm:leading-9"
+                  >
+                    내가 가고 싶은 소도시 찾아보기
+                  </h2>
+                  <p className="mt-3 max-w-[720px] break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                    국가와 도시명으로 지도에서 소도시를 먼저 고르고, 테마는 후보를 좁히는 필터와 선택 이후 일정 소재로 사용합니다.
+                  </p>
+                </div>
+
+                <div
+                  role="group"
+                  aria-label="국가 선택"
+                  className="inline-grid min-w-[236px] grid-cols-2 rounded-[8px] border border-[#F3B489] bg-[#FFF8F6] p-1 max-sm:min-w-0"
+                >
+                  {smallCityCountryOptions.map((option) => {
+                    const isSelected = option.country === cityMapCountry
+
+                    return (
+                      <button
+                        key={option.country}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => selectCityMapCountry(option.country)}
+                        className={`min-h-11 rounded-[5px] px-4 text-sm font-black text-[#33271E] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                          isSelected
+                            ? 'border border-[#A92B10] bg-[#F36B12]'
+                            : 'border border-transparent bg-transparent hover:bg-[#FFE0CA]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-7 grid grid-cols-[minmax(0,1fr)_auto] gap-3 max-md:grid-cols-1">
+                <label className="min-w-0">
+                  <span className="sr-only">소도시 검색어</span>
+                  <input
+                    value={cityMapQuery}
+                    onChange={(event) => setCityMapQuery(event.target.value)}
+                    placeholder="도시, 지역, 테마 검색"
+                    className="min-h-12 w-full rounded-[8px] border border-[#F3B489] bg-[#fffffa] px-4 text-sm font-bold text-[#33271E] outline-none placeholder:text-[#8A7467] focus:border-[#A92B10] focus:ring-4 focus:ring-[#FF7017]/15"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={clearSmallCityFilters}
+                  disabled={!hasActiveFilters}
+                  className="inline-flex min-h-12 items-center justify-center rounded-[8px] border border-[#F3B489] bg-[#fffffa] px-5 text-sm font-black text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] disabled:cursor-default disabled:opacity-45 disabled:hover:border-[#F3B489] disabled:hover:bg-[#fffffa] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                >
+                  필터 초기화
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="소도시 테마 필터">
+                {smallCityThemes.map((theme) => {
+                  const isSelected = selectedSmallCityThemes.includes(theme)
+
+                  return (
+                    <button
+                      key={theme}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => toggleSmallCityThemeFilter(theme)}
+                      className={`inline-flex min-h-9 items-center rounded-[5px] border px-3 py-1 text-[12px] font-black leading-4 text-[#33271E] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                        isSelected
+                          ? 'border-[#A92B10] bg-[#F36B12]'
+                          : 'border-[#F3B489] bg-[#FFF8F6] hover:border-[#F36B12] hover:bg-[#FFE0CA]'
+                      }`}
+                    >
+                      #{theme}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="mt-6 grid grid-cols-[minmax(0,1.05fr)_minmax(260px,0.45fr)] gap-5 max-lg:grid-cols-1">
+                <div className="min-w-0">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="break-keep text-sm font-black text-[#33271E]">
+                      {selectedCountryOption.label} {visibleSmallCityMarkers.length}곳 / 전체{' '}
+                      {activeCountryTotalCount}곳
+                    </p>
+                    <span className="rounded-[5px] border border-[#F3B489] bg-[#FFF8F6] px-3 py-1 text-[12px] font-black text-[#33271E]">
+                      후보 데이터 {filteredSmallCities.length}건
+                    </span>
+                  </div>
+
+                  <div
+                    data-testid="city-map-marker-layer"
+                    className="lovv-city-map-surface relative min-h-[500px] overflow-hidden rounded-[18px] border border-[#F3B489] bg-[#FFF8F6] max-sm:min-h-[380px]"
+                    role="region"
+                    aria-label={`${selectedCountryOption.label} 소도시 목업 지도. 현재 조건에 맞는 도시 마커 ${visibleSmallCityMarkers.length}개.`}
+                  >
+                    <SmallCityLeafletMap
+                      cities={visibleSmallCityMarkers}
+                      country={cityMapCountry}
+                      countryLabel={selectedCountryOption.label}
+                      selectedCityId={selectedSmallCity?.id ?? null}
+                      onSelectCity={selectSmallCity}
+                    />
+                    <div className="absolute left-5 top-5 z-10 rounded-[5px] border border-[#F3B489] bg-white/88 px-3 py-2 text-[12px] font-black text-[#33271E] backdrop-blur">
+                      {selectedCountryOption.description}
+                    </div>
+                    {visibleSmallCityMarkers.length === 0 ? (
+                      <div className="absolute inset-0 z-10 grid place-items-center px-6 text-center">
+                        <div className="rounded-[12px] border border-[#F3B489] bg-white/90 px-5 py-4 shadow-[0_12px_28px_-20px_rgba(51,39,30,0.28)]">
+                          <p className="break-keep text-sm font-black text-[#33271E]">
+                            조건에 맞는 소도시가 없습니다.
+                          </p>
+                          <p className="mt-2 break-keep text-[12px] font-semibold leading-5 text-[#6E5A50]">
+                            검색어를 줄이거나 테마 필터를 초기화해 주세요.
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <aside
+                  data-testid="city-map-detail-panel"
+                  aria-label={selectedSmallCity ? undefined : '선택 소도시 상세 정보'}
+                  aria-labelledby={selectedSmallCity ? 'city-map-selected-title' : undefined}
+                  aria-live="polite"
+                  className="min-w-0 rounded-[18px] border border-[#F3B489] bg-[#fffffa] p-5"
+                >
+                  {selectedSmallCity ? (
+                    <>
+                      <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#A92B10]">
+                        Selected city
+                      </p>
+                      <h3
+                        id="city-map-selected-title"
+                        className="mt-3 break-keep text-[28px] font-black leading-9 text-[#33271E] max-sm:text-2xl max-sm:leading-8"
+                      >
+                        {selectedSmallCity.nameKo}
+                      </h3>
+                      <p className="mt-2 break-keep text-sm font-black text-[#6E5A50]">
+                        {selectedSmallCity.countryLabel} · {selectedSmallCity.region}
+                        {selectedSmallCity.nameLocal ? ` · ${selectedSmallCity.nameLocal}` : ''}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {selectedSmallCity.themes.map((theme) => (
+                          <span
+                            key={`${selectedSmallCity.id}-${theme}`}
+                            className="rounded-[5px] border border-[#F3B489] bg-[#FFF0E4] px-3 py-1 text-[12px] font-black text-[#33271E]"
+                          >
+                            #{theme}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-5 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                        {selectedSmallCity.summary}
+                      </p>
+                      <p className="mt-3 break-keep text-sm leading-6 text-[#33271E]">
+                        {selectedSmallCity.detail}
+                      </p>
+                      <div className="mt-5 rounded-[12px] border border-[#F3B489] bg-[#FFF8F6] p-4">
+                        <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#A92B10]">
+                          First route note
+                        </p>
+                        <p className="mt-2 break-keep text-sm font-black leading-6 text-[#33271E]">
+                          {selectedSmallCity.routeSeed.slice(0, 3).join(' · ')}
+                        </p>
+                      </div>
+                      <div className="mt-5">
+                        <p className="text-[12px] font-black text-[#33271E]">하이라이트</p>
+                        <ul className="mt-2 grid gap-2">
+                          {selectedSmallCity.highlights.slice(0, 4).map((highlight) => (
+                            <li
+                              key={`${selectedSmallCity.id}-${highlight}`}
+                              className="break-keep rounded-[5px] border border-[#F3B489] bg-white px-3 py-2 text-[12px] font-bold leading-5 text-[#33271E]"
+                            >
+                              {highlight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openSmallCityPlanner(selectedSmallCity)}
+                        className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[8px] border border-[#A92B10] bg-[#F36B12] px-5 text-sm font-black text-[#33271E] transition hover:bg-[#FF8A2A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                      >
+                        이 소도시로 AI 일정 짜기
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex min-h-[320px] flex-col justify-center">
+                      <p className="break-keep text-lg font-black leading-7 text-[#33271E]">
+                        선택할 수 있는 소도시가 없습니다.
+                      </p>
+                      <p className="mt-2 break-keep text-sm font-semibold leading-6 text-[#6E5A50]">
+                        필터를 초기화하면 다시 상세 정보를 볼 수 있습니다.
+                      </p>
+                    </div>
+                  )}
+                </aside>
+              </div>
+
+              <div className="mt-5 rounded-[18px] border border-[#F3B489] bg-[#FFF8F6] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p
+                      id="city-map-results-title"
+                      className="text-sm font-black text-[#33271E]"
+                    >
+                      표시된 소도시 목록
+                    </p>
+                    <p className="mt-1 break-keep text-[12px] font-semibold leading-5 text-[#6E5A50]">
+                      키보드 사용자는 이 목록에서 도시를 선택할 수 있습니다.
+                    </p>
+                  </div>
+                  <span className="rounded-[5px] border border-[#F3B489] bg-white px-3 py-1 text-[12px] font-black text-[#33271E]">
+                    {visibleSmallCityMarkers.length} / {visibleSmallCityMarkers.length}
+                  </span>
+                </div>
+
+                {visibleSmallCityMarkers.length > 0 ? (
+                  <ol
+                    aria-labelledby="city-map-results-title"
+                    data-testid="city-map-result-list"
+                    className="mt-4 grid max-h-[460px] grid-cols-3 gap-2 overflow-y-auto pr-1 max-lg:grid-cols-2 max-sm:max-h-[360px] max-sm:grid-cols-1"
+                  >
+                    {visibleSmallCityMarkers.map((city) => {
+                      const isSelected = city.id === selectedSmallCity?.id
+
+                      return (
+                        <li key={`result-${city.id}`}>
+                          <button
+                            type="button"
+                            aria-current={isSelected ? 'true' : undefined}
+                            onClick={() => selectSmallCity(city)}
+                            className={`min-h-[74px] w-full rounded-[8px] border px-4 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E] ${
+                              isSelected
+                                ? 'border-[#A92B10] bg-[#FFE0CA]'
+                                : 'border-[#F3B489] bg-white hover:border-[#F36B12] hover:bg-[#fffffa]'
+                            }`}
+                          >
+                            <span className="block break-keep text-sm font-black leading-5 text-[#33271E]">
+                              {city.nameKo}
+                            </span>
+                            <span className="mt-1 block break-keep text-[12px] font-semibold leading-5 text-[#6E5A50]">
+                              {city.countryLabel} · {city.region}
+                              {city.nameLocal ? ` · ${city.nameLocal}` : ''}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ol>
+                ) : (
+                  <p className="mt-4 break-keep rounded-[8px] border border-[#F3B489] bg-white px-4 py-4 text-sm font-bold text-[#33271E]">
+                    표시할 결과가 없습니다.
+                  </p>
+                )}
+
+                {filteredSmallCities.length !== visibleSmallCityMarkers.length ? (
+                  <p className="mt-3 break-keep text-[12px] font-semibold leading-5 text-[#6E5A50]">
+                    내부 후보 데이터 {filteredSmallCities.length}건을 도시명 기준으로 묶어 마커와 목록에는 {visibleSmallCityMarkers.length}개 소도시만 표시합니다.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <aside className="min-w-0 bg-[#FFF0E4] p-8 max-sm:p-5">
+              <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#A92B10]">
+                Backend-ready note
+              </p>
+              <h3 className="mt-3 break-keep text-2xl font-black leading-8 text-[#33271E]">
+                실제 DB와 지도 SDK로 바꾸기 쉬운 구조
+              </h3>
+              <p className="mt-4 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                현재는 프론트엔드 fixture로 마커 밀도, 필터, 상세 패널, AI 일정 연결 흐름을 먼저 검증합니다.
+              </p>
+              <dl className="mt-6 grid gap-3">
+                {[
+                  ['데이터', 'SmallCity fixture → /api/small-cities'],
+                  ['지도', 'Leaflet/OpenStreetMap adapter → production map provider'],
+                  ['일정', 'PlannerCityContext → AI planner request'],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-[8px] border border-[#F3B489] bg-[#fffffa] p-4">
+                    <dt className="text-[12px] font-black text-[#A92B10]">{label}</dt>
+                    <dd className="mt-1 break-keep text-sm font-bold leading-6 text-[#33271E]">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </aside>
+          </div>
         </div>
       </section>
     )
@@ -1626,7 +2107,7 @@ function App() {
               </div>
               <div className="flex flex-wrap justify-end gap-2 max-md:justify-start">
                 {[
-                  selectedPreference.cityPair,
+                  plannerBasisLabel,
                   planDraft.durationLabel,
                   planDraft.festivalThemeLabel,
                   planDraft.intensityLabel,
@@ -2422,6 +2903,8 @@ function App() {
                   })}
                 </div>
               </section>
+
+              {renderCityMapDiscoverySection()}
 
               <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3 max-sm:bottom-4 max-sm:right-4">
                 {isQuickActionsOpen ? (
