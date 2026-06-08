@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { createSmallCityMapMarkers, smallCities, smallCityCounts } from './data/smallCities'
@@ -223,6 +223,29 @@ describe('MVP main entry screen', () => {
     )
     expect(screen.getByRole('link', { name: 'AI 일정 짜기' })).toHaveAttribute('href', '#chat')
     expect(screen.getByText('처음엔 작게, 추천은 명확하게')).toBeInTheDocument()
+  })
+
+  it('keeps page-like view changes in browser history for back navigation', async () => {
+    seedUser()
+    seedPreference('부산 · 오키나와')
+    render(<App />)
+
+    expect(screen.getByTestId('main-entry')).toBeInTheDocument()
+    expect(window.location.search).toBe('?view=home')
+
+    fireEvent.click(screen.getByRole('link', { name: 'AI 일정 짜기' }))
+
+    expect(screen.getByRole('heading', { name: 'AI 일정 챗봇' })).toBeInTheDocument()
+    expect(window.location.search).toBe('?view=chat')
+
+    act(() => {
+      window.history.back()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('main-entry')).toBeInTheDocument()
+    })
+    expect(window.location.search).toBe('?view=home')
   })
 
   it('opens monthly recommendation detail before starting the planner', () => {

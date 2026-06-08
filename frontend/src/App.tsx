@@ -458,6 +458,19 @@ type View =
   | 'preferenceEdit'
   | 'themeDetail'
 
+const viewSearchParam = 'view'
+const historyStateKey = 'lovvView'
+const appViews = new Set<View>([
+  'auth',
+  'onboarding',
+  'home',
+  'chat',
+  'planDetail',
+  'mypage',
+  'preferenceEdit',
+  'themeDetail',
+])
+
 const durationGuidePrompts = ['당일치기', '1박 2일', '2박 3일', '3박 4일', '4박 5일']
 const festivalThemePrompts: { label: string; choice: FestivalThemeChoice }[] = [
   { label: '축제 포함', choice: 'include' },
@@ -576,6 +589,53 @@ const readStoredUser = (): LovvUser | null => {
   } catch {
     return null
   }
+}
+
+const isAppView = (value: string | null): value is View => Boolean(value && appViews.has(value as View))
+
+const getDefaultActiveView = (): View => {
+  if (!readStoredUser()) {
+    return 'auth'
+  }
+
+  return readStoredPreferenceProfile() ? 'home' : 'onboarding'
+}
+
+const getRouteView = () => {
+  const urlSearchParams = new URLSearchParams(window.location.search)
+
+  return urlSearchParams.get(viewSearchParam)
+}
+
+const getAccessibleView = (requestedView: string | null = getRouteView()): View => {
+  const defaultView = getDefaultActiveView()
+
+  if (!isAppView(requestedView)) {
+    return defaultView
+  }
+
+  if (defaultView === 'auth') {
+    return 'auth'
+  }
+
+  if (defaultView === 'onboarding') {
+    return 'onboarding'
+  }
+
+  if (requestedView === 'auth' || requestedView === 'onboarding') {
+    return defaultView
+  }
+
+  return requestedView
+}
+
+const createViewUrl = (view: View) => {
+  const url = new URL(window.location.href)
+
+  url.searchParams.set(viewSearchParam, view)
+  url.hash = ''
+
+  return `${url.pathname}${url.search}${url.hash}`
 }
 
 const readStoredSavedPlans = (): SavedPlan[] => {
@@ -960,13 +1020,7 @@ function App() {
   const selectedPreference = selectedPreferences[0] ?? preferences[0]
   const selectedPreferenceLabel = getPreferenceProfileLabel(selectedPreferenceProfile)
   const [activeMonthlyRecommendation, setActiveMonthlyRecommendation] = useState(monthlyRecommendations[0])
-  const [activeView, setActiveView] = useState<View>(() => {
-    if (!readStoredUser()) {
-      return 'auth'
-    }
-
-    return readStoredPreferenceProfile() ? 'home' : 'onboarding'
-  })
+  const [activeView, setActiveView] = useState<View>(() => getAccessibleView())
   const [pendingPreferenceProfile, setPendingPreferenceProfile] = useState(() => selectedPreferenceProfile)
   const [coverImageIndex, setCoverImageIndex] = useState(0)
   const [hasSelectedCover, setHasSelectedCover] = useState(false)
@@ -1139,6 +1193,41 @@ function App() {
     },
   ]
 
+  const navigateToView = (view: View, options: { replace?: boolean } = {}) => {
+    const nextView = getAccessibleView(view)
+    const nextUrl = createViewUrl(nextView)
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    setActiveView(nextView)
+
+    if (options.replace) {
+      window.history.replaceState({ [historyStateKey]: nextView }, '', nextUrl)
+      return
+    }
+
+    if (currentUrl !== nextUrl) {
+      window.history.pushState({ [historyStateKey]: nextView }, '', nextUrl)
+    }
+  }
+
+  useEffect(() => {
+    const initialView = getAccessibleView(getRouteView())
+
+    window.history.replaceState({ [historyStateKey]: initialView }, '', createViewUrl(initialView))
+
+    const handlePopState = () => {
+      setIsQuickActionsOpen(false)
+      setIsSessionMenuOpen(false)
+      setActiveView(getAccessibleView(getRouteView()))
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -1240,11 +1329,11 @@ function App() {
     }
 
     setSavedPlanNotice(null)
-    setActiveView('planDetail')
+    navigateToView('planDetail')
   }
 
   const returnToChatWorkspace = () => {
-    setActiveView('chat')
+    navigateToView('chat', { replace: true })
   }
 
   const signInWithMockProvider = (provider: AuthProvider) => {
@@ -1252,25 +1341,25 @@ function App() {
 
     localStorage.setItem(authStorageKey, JSON.stringify(mockUser))
     setCurrentUser(mockUser)
-    setActiveView(readStoredPreferenceProfile() ? 'home' : 'onboarding')
+    navigateToView(readStoredPreferenceProfile() ? 'home' : 'onboarding', { replace: true })
   }
 
   const signOut = () => {
     setIsSessionMenuOpen(false)
     localStorage.removeItem(authStorageKey)
     setCurrentUser(null)
-    setActiveView('auth')
+    navigateToView('auth', { replace: true })
   }
 
   const goHome = (event?: React.MouseEvent<HTMLElement>) => {
     event?.preventDefault()
     setIsSessionMenuOpen(false)
-    setActiveView('home')
+    navigateToView('home')
   }
 
   const openMyPage = () => {
     setIsSessionMenuOpen(false)
-    setActiveView('mypage')
+    navigateToView('mypage')
   }
 
   const openPreferenceEdit = () => {
@@ -1279,7 +1368,7 @@ function App() {
     setHasSelectedCover(true)
     setPreferenceNotice(null)
     setThemeSelectionNotice(null)
-    setActiveView('preferenceEdit')
+    navigateToView('preferenceEdit')
   }
 
   const cancelPreferenceEdit = () => {
@@ -1287,7 +1376,7 @@ function App() {
     setCoverImageIndex(0)
     setHasSelectedCover(false)
     setThemeSelectionNotice(null)
-    setActiveView('mypage')
+    navigateToView('mypage', { replace: true })
   }
 
   const currentProviderLabel =
@@ -1301,7 +1390,7 @@ function App() {
     event?.preventDefault()
     setIsSessionMenuOpen(false)
     resetPlannerFlow(selectedPreference, null, selectedPreferenceProfile)
-    setActiveView('chat')
+    navigateToView('chat')
   }
 
   const toggleSessionMenu = () => {
@@ -1315,7 +1404,7 @@ function App() {
 
   const scrollToTop = () => {
     setIsQuickActionsOpen(false)
-    setActiveView('home')
+    navigateToView('home')
     window.scrollTo?.({ behavior: 'smooth', top: 0 })
   }
 
@@ -1331,7 +1420,7 @@ function App() {
   const openMonthlyRecommendationDetail = (recommendation: MonthlyRecommendation) => {
     setActiveMonthlyRecommendation(recommendation)
     setIsQuickActionsOpen(false)
-    setActiveView('themeDetail')
+    navigateToView('themeDetail')
   }
 
   const openMonthlyRecommendationPlan = (preference: Preference) => {
@@ -1339,7 +1428,7 @@ function App() {
 
     resetPlannerFlow(preference, null, nextProfile)
     setIsQuickActionsOpen(false)
-    setActiveView('chat')
+    navigateToView('chat')
   }
 
   const selectCityMapCountry = (country: SmallCityCountry) => {
@@ -1388,7 +1477,7 @@ function App() {
 
     resetPlannerFlow(selectedPreference, cityContext, selectedPreferenceProfile)
     setIsQuickActionsOpen(false)
-    setActiveView('chat')
+    navigateToView('chat')
   }
 
   const enterMainWithPreference = () => {
@@ -1398,7 +1487,7 @@ function App() {
     }
 
     storePreferenceProfile(selectedPreferenceProfile)
-    setActiveView('home')
+    navigateToView('home', { replace: true })
   }
 
   const savePreferenceEdit = () => {
@@ -1414,7 +1503,7 @@ function App() {
     setHasSelectedCover(false)
     setThemeSelectionNotice(null)
     setPreferenceNotice('취향이 변경됐어요. 다음 AI 일정부터 반영됩니다.')
-    setActiveView('mypage')
+    navigateToView('mypage', { replace: true })
   }
 
   const togglePreferenceTheme = (themeId: ThemeId) => {
