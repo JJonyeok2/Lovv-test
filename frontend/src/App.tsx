@@ -3,7 +3,7 @@ import logoImage from './assets/lovv-logo.png'
 import foxFaceImage from './assets/foxhead-smile.png'
 import beppuImage from './assets/cities/beppu.jpg'
 import busanImage from './assets/cities/busan.jpg'
-import fireworkImage from './assets/cities/firework.jpg'
+import fireworkImage from './assets/cities/hero-firework.jpg'
 import gangneungImage from './assets/cities/gangneung.jpg'
 import gyeongjuImage from './assets/cities/gyeongju.jpg'
 import jejuImage from './assets/cities/jeju.jpg'
@@ -14,15 +14,14 @@ import nikkoImage from './assets/cities/nikko.jpg'
 import okinawaImage from './assets/cities/okinawa.jpg'
 import onyangImage from './assets/cities/onyang.jpg'
 import osakaImage from './assets/cities/osaka.jpg'
-import seaHeroImage from './assets/cities/sea.jpg'
-import townHeroImage from './assets/cities/town.jpg'
+import seaHeroImage from './assets/cities/hero-sea.jpg'
+import townHeroImage from './assets/cities/hero-town.jpg'
 import { SmallCityLeafletMap } from './components/SmallCityLeafletMap'
 import {
   createSmallCityMapMarkers,
   createPlannerCityContext,
   filterSmallCities,
   smallCityCountryOptions,
-  smallCityThemes,
   type PlannerCityContext,
   type SmallCity,
   type SmallCityCountry,
@@ -770,6 +769,12 @@ const cityThemeToThemeId: Partial<Record<SmallCityTheme, ThemeId>> = {
   예술: 'art_emotion',
 }
 
+const mapFilterThemes: SmallCityTheme[] = ['온천', '바다', '미식', '전통', '자연', '예술']
+const mapFilterThemeSet = new Set<SmallCityTheme>(mapFilterThemes)
+
+const getVisibleMapThemes = (themes: SmallCityTheme[]) =>
+  themes.filter((theme) => mapFilterThemeSet.has(theme))
+
 const getPlannerBaselineThemeIds = (
   profile: PreferenceProfile,
   cityContext: PlannerCityContext | null,
@@ -791,6 +796,9 @@ const getPlannerBaselineThemeIds = (
 
 const hasCityFestivalContent = (cityContext: PlannerCityContext | null) =>
   Boolean(cityContext?.themes.includes('축제'))
+
+const shouldAskFestivalForCity = (cityContext: PlannerCityContext | null) =>
+  !cityContext || hasCityFestivalContent(cityContext)
 
 const detectExcludedThemes = (query: string) =>
   themeDefinitions
@@ -874,6 +882,28 @@ const getFestivalThemeLabel = (choice: FestivalThemeChoice) => {
   return '축제 미정'
 }
 
+const getPlanFestivalThemeSummary = (
+  choice: FestivalThemeChoice,
+  cityContext: PlannerCityContext | null,
+) => {
+  if (!shouldAskFestivalForCity(cityContext)) {
+    return '선택한 소도시의 장소 단서와 여행 기간을 중심으로 구성합니다.'
+  }
+
+  return getFestivalThemeSummary(choice)
+}
+
+const getPlanFestivalThemeLabel = (
+  choice: FestivalThemeChoice,
+  cityContext: PlannerCityContext | null,
+) => {
+  if (!shouldAskFestivalForCity(cityContext)) {
+    return '축제 조건 없음'
+  }
+
+  return getFestivalThemeLabel(choice)
+}
+
 const createPlanDraft = (
   preference: Preference,
   message = '',
@@ -894,7 +924,7 @@ const createPlanDraft = (
     : isArtFocused
       ? '전시와 편집숍 사이 이동을 줄이는 쪽으로, 저녁에는 동네 산책보다 휴식 여백을 먼저 둡니다.'
       : `${preference.routeHint} 흐름을 기준으로 이동 부담을 낮추고, ${preference.tag} 취향이 잘 보이는 장면을 앞에 둡니다.`
-  const festivalThemeSummary = getFestivalThemeSummary(festivalThemeChoice)
+  const festivalThemeSummary = getPlanFestivalThemeSummary(festivalThemeChoice, cityContext)
   const firstRoute = cityRouteSeed[0] ?? preference.routeHint
   const middleRoute = cityRouteSeed.slice(1).join(' · ') || preference.description
   const lastRoute = cityRouteSeed[2] ?? preference.editorialNote
@@ -903,7 +933,7 @@ const createPlanDraft = (
     durationLabel,
     dayCount,
     intensityLabel,
-    festivalThemeLabel: getFestivalThemeLabel(festivalThemeChoice),
+    festivalThemeLabel: getPlanFestivalThemeLabel(festivalThemeChoice, cityContext),
     summary: `${baseSummary} ${festivalThemeSummary}`,
     stops: [
       {
@@ -1117,10 +1147,11 @@ function App() {
   const selectedThemeHashtags = getThemeHashtags(selectedPreferenceProfile)
   const recommendationBasisHashtags = getRecommendationBasisHashtags(selectedPreferenceProfile)
   const currentHeroTheme = heroThemes[currentHeroThemeIndex]
-  const shouldAskFestivalTheme = !plannerCityContext || hasCityFestivalContent(plannerCityContext)
+  const shouldAskFestivalTheme = shouldAskFestivalForCity(plannerCityContext)
   const shouldShowFestivalPrompt = shouldAskFestivalTheme && festivalThemeChoice === 'undecided'
   const shouldShowDurationPrompt = !shouldShowFestivalPrompt && selectedDurationLabel === null
-  const hasGuidedPlannerChoices = festivalThemeChoice !== 'undecided' && selectedDurationLabel !== null
+  const hasSettledFestivalChoice = !shouldAskFestivalTheme || festivalThemeChoice !== 'undecided'
+  const hasGuidedPlannerChoices = hasSettledFestivalChoice && selectedDurationLabel !== null
   const isPlannerReady = hasGuidedPlannerChoices && plannerConditionExtraction !== null
   const canSubmitChatInput = hasGuidedPlannerChoices && chatInput.trim().length > 0
   const plannerBasisLabel = plannerCityContext
@@ -1172,14 +1203,16 @@ function App() {
     : getThemeLabels(plannerPreferenceProfile.selectedThemeIds)
   const plannerConditionSummary = plannerConditionExtraction
     ? [
-        getFestivalThemeLabel(festivalThemeChoice),
+        shouldAskFestivalTheme ? getFestivalThemeLabel(festivalThemeChoice) : null,
         selectedDurationLabel ?? planDraft.durationLabel,
         formatThemeList(plannerConditionExtraction.activeRequiredThemes),
         ...plannerConditionExtraction.softPreferences.slice(0, 2),
       ]
         .filter(Boolean)
         .join(' · ')
-    : `${getFestivalThemeLabel(festivalThemeChoice)} · ${selectedDurationLabel ?? '기간 미정'}`
+    : [shouldAskFestivalTheme ? getFestivalThemeLabel(festivalThemeChoice) : null, selectedDurationLabel ?? '기간 미정']
+        .filter(Boolean)
+        .join(' · ')
   const plannerStateSteps: {
     id: string
     label: string
@@ -1201,8 +1234,8 @@ function App() {
     {
       id: 'candidates',
       label: '후보 탐색',
-      status: festivalThemeChoice === 'undecided' ? 'active' : 'completed',
-      statusLabel: festivalThemeChoice === 'undecided' ? '진행 중' : '완료',
+      status: hasSettledFestivalChoice ? 'completed' : 'active',
+      statusLabel: hasSettledFestivalChoice ? '완료' : '진행 중',
       body: plannerCityContext
         ? `${plannerCityContext.countryLabel} ${plannerCityContext.region}의 ${plannerCityContext.cityName} 상세 정보를 기준 후보로 고정했습니다.`
         : '선택한 분위기와 가까운 한국·일본 소도시 후보를 좁히고 있어요.',
@@ -1211,8 +1244,8 @@ function App() {
     {
       id: 'schedule',
       label: '일정 구성',
-      status: isPlannerReady ? 'completed' : festivalThemeChoice !== 'undecided' ? 'active' : 'pending',
-      statusLabel: isPlannerReady ? '완료' : festivalThemeChoice !== 'undecided' ? '진행 중' : '대기',
+      status: isPlannerReady ? 'completed' : hasSettledFestivalChoice ? 'active' : 'pending',
+      statusLabel: isPlannerReady ? '완료' : hasSettledFestivalChoice ? '진행 중' : '대기',
       body: isPlannerReady
         ? `${plannerConditionSummary} 조건으로 구성 중입니다.`
         : hasGuidedPlannerChoices
@@ -1286,7 +1319,7 @@ function App() {
   ) => {
     const nextPlannerContextText = getPlannerCitySeedText(cityContext)
     const nextPlannerLabel = getPreferenceProfileLabel(profile)
-    const shouldAskFestival = !cityContext || hasCityFestivalContent(cityContext)
+    const shouldAskFestival = shouldAskFestivalForCity(cityContext)
     const nextFestivalThemeChoice: FestivalThemeChoice = shouldAskFestival ? 'undecided' : 'exclude'
 
     setChatInput('')
@@ -1586,7 +1619,7 @@ function App() {
       return
     }
 
-    if (festivalThemeChoice === 'undecided') {
+    if (shouldShowFestivalPrompt) {
       const nextFestivalThemeChoice = resolveFestivalThemeChoice(trimmedMessage, festivalThemeChoice)
 
       if (nextFestivalThemeChoice === 'undecided') {
@@ -1992,7 +2025,9 @@ function App() {
               아직 일정이 생성되지 않았어요
             </h3>
             <p className="mt-4 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
-              축제 포함 여부와 여행 기간을 고른 뒤 이번 여행 조건을 입력하면 일정 초안이 여기에 표시됩니다.
+              {shouldAskFestivalTheme
+                ? '축제 포함 여부와 여행 기간을 고른 뒤 이번 여행 조건을 입력하면 일정 초안이 여기에 표시됩니다.'
+                : '여행 기간을 고른 뒤 해당 소도시의 동선 단서를 기준으로 일정 초안이 여기에 표시됩니다.'}
             </p>
           </div>
           <div className="mt-8 rounded-[18px] border border-[#F3B489] bg-[#FFF0E4] p-5">
@@ -2039,9 +2074,9 @@ function App() {
               plannerCityContext
                 ? `${plannerCityContext.cityName} 중심`
                 : `${plannerPreferenceLabel} 중심`,
-              `${planDraft.festivalThemeLabel} 반영`,
+              shouldAskFestivalTheme ? `${planDraft.festivalThemeLabel} 반영` : null,
               `${plannerPreferenceProfile.selectedThemeIds.length}개 테마 반영`,
-            ].map((item) => (
+            ].filter((item): item is string => Boolean(item)).map((item) => (
               <span
                 key={item}
                 className="inline-flex min-h-11 min-w-0 items-center rounded-[14px] border border-[#F3B489] bg-[#fffffa] px-4 py-2 break-keep text-sm font-bold leading-5 text-[#33271E] max-sm:text-[13px]"
@@ -2205,8 +2240,15 @@ function App() {
     const selectedThemeKeywords = getThemeLabels(selectedPreferenceProfile.selectedThemeIds).flatMap((label) =>
       label.split('·'),
     )
+    const selectedSmallCityVisibleThemes = selectedSmallCity
+      ? getVisibleMapThemes(selectedSmallCity.themes)
+      : []
     const selectedCityMatchedThemes =
-      selectedSmallCity?.themes.filter((theme) => selectedThemeKeywords.includes(theme)) ?? []
+      selectedSmallCityVisibleThemes.filter((theme) => selectedThemeKeywords.includes(theme)) ?? []
+    const selectedCityFallbackThemeText =
+      selectedSmallCityVisibleThemes.length > 0
+        ? `${selectedSmallCityVisibleThemes.slice(0, 2).join('·')} 테마`
+        : '선택한 도시의 장소 단서'
 
     return (
       <section
@@ -2283,7 +2325,7 @@ function App() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="소도시 테마 필터">
-                {smallCityThemes.map((theme) => {
+                {mapFilterThemes.map((theme) => {
                   const isSelected = selectedSmallCityThemes.includes(theme)
 
                   return (
@@ -2437,7 +2479,7 @@ function App() {
                             {selectedSmallCity.nameLocal ? ` · ${selectedSmallCity.nameLocal}` : ''}
                           </p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {selectedSmallCity.themes.map((theme) => (
+                            {selectedSmallCityVisibleThemes.map((theme) => (
                               <span
                                 key={`list-${selectedSmallCity.id}-${theme}`}
                                 className="rounded-[5px] border border-[#F3B489] bg-[#FFF8F6] px-2.5 py-1 text-[11px] font-black text-[#33271E]"
@@ -2464,7 +2506,7 @@ function App() {
                             <p className="mt-2 break-keep text-[13px] font-black leading-6 text-[#33271E]">
                               {selectedCityMatchedThemes.length > 0
                                 ? `${selectedCityMatchedThemes.join('·')} 테마와 겹쳐 바로 일정 후보로 볼 만합니다.`
-                                : `${selectedSmallCity.themes.slice(0, 2).join('·')} 장면이 뚜렷해서 새 후보로 비교하기 좋습니다.`}
+                                : `${selectedCityFallbackThemeText}가 뚜렷해서 새 후보로 비교하기 좋습니다.`}
                             </p>
                           </div>
                           <button
@@ -2524,7 +2566,7 @@ function App() {
                       {selectedSmallCity.nameLocal ? ` · ${selectedSmallCity.nameLocal}` : ''}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {selectedSmallCity.themes.map((theme) => (
+                      {selectedSmallCityVisibleThemes.map((theme) => (
                         <span
                           key={`${selectedSmallCity.id}-${theme}`}
                           className="rounded-[5px] border border-[#F3B489] bg-[#fffffa] px-3 py-1 text-[12px] font-black text-[#33271E]"
@@ -2546,7 +2588,7 @@ function App() {
                       <p className="mt-2 break-keep text-sm font-black leading-6 text-[#33271E]">
                         {selectedCityMatchedThemes.length > 0
                           ? `선택 취향의 ${selectedCityMatchedThemes.join('·')} 테마와 겹쳐 먼저 볼 만합니다.`
-                          : `${selectedSmallCity.themes.slice(0, 2).join('·')} 장면이 뚜렷해서 새로운 후보로 비교하기 좋습니다.`}
+                          : `${selectedCityFallbackThemeText}가 뚜렷해서 새로운 후보로 비교하기 좋습니다.`}
                       </p>
                     </div>
                     <div className="mt-5 rounded-[12px] border border-[#F3B489] bg-[#fffffa] p-4">
@@ -2599,6 +2641,7 @@ function App() {
   const renderThemeDetailView = () => {
     const recommendation = activeMonthlyRecommendation
     const preference = recommendation.preference
+    const recommendationHasFestivalTheme = recommendation.themes.includes('축제')
     const detailFacts = [
       {
         label: '기준 테마',
@@ -2613,7 +2656,9 @@ function App() {
       {
         label: '첫 동선 단서',
         value: preference.routeHint,
-        body: 'AI 일정은 이 동선 단서를 기준으로 기간과 축제 포함 여부를 좁힙니다.',
+        body: recommendationHasFestivalTheme
+          ? 'AI 일정은 이 동선 단서를 기준으로 기간과 축제 포함 여부를 좁힙니다.'
+          : 'AI 일정은 이 동선 단서를 기준으로 여행 기간과 세부 취향을 좁힙니다.',
       },
     ]
 
@@ -2738,7 +2783,9 @@ function App() {
               세부 일정 상세
             </h1>
             <p className="mt-5 break-keep text-sm font-semibold leading-6 text-[#33271E]">
-              아직 확정된 일정 초안이 없어요. 챗봇에서 축제 포함 여부와 여행 기간을 먼저 골라주세요.
+              {shouldAskFestivalTheme
+                ? '아직 확정된 일정 초안이 없어요. 챗봇에서 축제 포함 여부와 여행 기간을 먼저 골라주세요.'
+                : '아직 확정된 일정 초안이 없어요. 챗봇에서 여행 기간을 먼저 골라주세요.'}
             </p>
             <button
               type="button"
@@ -2782,9 +2829,9 @@ function App() {
                 {[
                   plannerBasisLabel,
                   planDraft.durationLabel,
-                  planDraft.festivalThemeLabel,
+                  shouldAskFestivalTheme ? planDraft.festivalThemeLabel : null,
                   planDraft.intensityLabel,
-                ].map((item) => (
+                ].filter((item): item is string => Boolean(item)).map((item) => (
                   <span
                     key={item}
                     className="inline-flex min-h-9 items-center rounded-full border border-[#F3B489] bg-[#fffffa] px-4 py-1 text-[12px] font-black leading-4 text-[#33271E]"

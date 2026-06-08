@@ -296,9 +296,16 @@ describe('MVP main entry screen', () => {
     ).toBe(false)
 
     const cityMapSection = screen.getByTestId('city-map-discovery-section')
+    const cityThemeFilter = within(cityMapSection).getByRole('group', { name: '소도시 테마 필터' })
 
     expect(within(cityMapSection).getByRole('heading', { name: '내가 가고 싶은 소도시 찾아보기' })).toBeInTheDocument()
     expect(within(cityMapSection).getByRole('button', { name: '한국' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(cityThemeFilter).getAllByRole('button')).toHaveLength(6)
+    ;['#온천', '#바다', '#미식', '#전통', '#자연', '#예술'].forEach((themeLabel) => {
+      expect(within(cityThemeFilter).getByRole('button', { name: themeLabel })).toBeInTheDocument()
+    })
+    expect(within(cityThemeFilter).queryByRole('button', { name: '#축제' })).not.toBeInTheDocument()
+    expect(within(cityThemeFilter).queryByRole('button', { name: '#산책' })).not.toBeInTheDocument()
     expect(within(cityMapSection).getByText('한국 13곳 / 전체 13곳')).toBeInTheDocument()
     expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '13')
     expect(within(screen.getByTestId('city-map-result-list')).getAllByRole('button')).toHaveLength(13)
@@ -364,6 +371,8 @@ describe('MVP main entry screen', () => {
     expect(within(cityMapSection).getByText('한국 1곳 / 전체 13곳')).toBeInTheDocument()
     expect(within(cityMapSection).getByTestId('city-map-leaflet-map')).toHaveAttribute('data-marker-count', '1')
     expect(within(cityMapSection).getByTestId('city-map-detail-panel')).toHaveTextContent('경주')
+    expect(within(cityMapSection).getAllByText('#전통').length).toBeGreaterThan(0)
+    expect(within(cityMapSection).queryByText('#산책')).not.toBeInTheDocument()
 
     fireEvent.click(within(cityMapSection).getByRole('button', { name: '#온천' }))
 
@@ -407,12 +416,19 @@ describe('MVP main entry screen', () => {
     expect(screen.queryByRole('button', { name: '축제 제외' })).not.toBeInTheDocument()
     expect(screen.getByText('일정 기간을 먼저 골라주세요')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('여행 기간을 먼저 선택해 주세요')).toBeInTheDocument()
+    expect(
+      screen.getByText('여행 기간을 고른 뒤 해당 소도시의 동선 단서를 기준으로 일정 초안이 여기에 표시됩니다.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('축제 포함 여부와 여행 기간을 고른 뒤 이번 여행 조건을 입력하면 일정 초안이 여기에 표시됩니다.')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '1박 2일' }))
 
     expect(screen.getByText(/경주 중심으로 1박 2일 흐름을 잡아볼게요/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '생성된 일정 상세' })).toBeInTheDocument()
     expect(screen.getByText(/경주 · 경북 1박 2일 초안/)).toBeInTheDocument()
+    expect(screen.getByText(/선택한 소도시의 장소 단서와 여행 기간을 중심으로 구성합니다/)).toBeInTheDocument()
+    expect(screen.queryByText('축제 제외 반영')).not.toBeInTheDocument()
+    expect(screen.queryByText('축제 조건 없음 반영')).not.toBeInTheDocument()
     expect(screen.getByLabelText('조건 해석 결과')).toHaveTextContent('역사·전통')
     expect(screen.getByPlaceholderText('추가로 원하는 조건을 입력해 주세요')).toBeInTheDocument()
   })
@@ -425,7 +441,15 @@ describe('MVP main entry screen', () => {
 
     expect(screen.getByRole('heading', { name: '당신이 몰랐던 소도시의 숨은 매력' })).toBeInTheDocument()
     expect(screen.getByTestId('hero-theme-mountain')).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByTestId('hero-theme-mountain').querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('hero-town'),
+    )
     expect(screen.getByTestId('hero-theme-sea')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByTestId('hero-theme-sea').querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('hero-sea'),
+    )
 
     act(() => {
       vi.advanceTimersByTime(10000)
@@ -444,7 +468,7 @@ describe('MVP main entry screen', () => {
     expect(screen.getByTestId('hero-theme-festival')).toHaveAttribute('aria-hidden', 'false')
     expect(screen.getByTestId('hero-theme-festival').querySelector('img')).toHaveAttribute(
       'src',
-      expect.stringContaining('firework'),
+      expect.stringContaining('hero-firework'),
     )
     expect(screen.getByTestId('hero-slogan-accent')).toHaveClass('lovv-text-festival-gradient')
   })
