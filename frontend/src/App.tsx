@@ -106,11 +106,18 @@ type ChatMessage = {
 type PlannerStepStatus = 'completed' | 'active' | 'pending'
 
 type PlanStop = {
-  time: '오전' | '오후' | '저녁'
+  time: '아침' | '점심' | '저녁'
   move: string
   title: string
   body: string
   reason: string
+}
+
+type PlanDay = {
+  day: number
+  title: string
+  summary: string
+  stops: PlanStop[]
 }
 
 type PlanDraft = {
@@ -119,6 +126,7 @@ type PlanDraft = {
   intensityLabel: string
   festivalThemeLabel: string
   summary: string
+  days: PlanDay[]
   stops: PlanStop[]
 }
 
@@ -143,6 +151,7 @@ type SavedPlan = {
   festivalThemeLabel: string
   intensityLabel: string
   summary: string
+  days?: PlanDay[]
   stops: PlanStop[]
   createdAt: string
   savedAt: string
@@ -658,7 +667,7 @@ const readStoredSavedPlans = (): SavedPlan[] => {
         typeof plan?.title === 'string' &&
         typeof plan?.cityPair === 'string' &&
         typeof plan?.durationLabel === 'string' &&
-        Array.isArray(plan?.stops),
+        (Array.isArray(plan?.days) || Array.isArray(plan?.stops)),
     )
   } catch {
     return []
@@ -928,6 +937,74 @@ const createPlanDraft = (
   const firstRoute = cityRouteSeed[0] ?? preference.routeHint
   const middleRoute = cityRouteSeed.slice(1).join(' · ') || preference.description
   const lastRoute = cityRouteSeed[2] ?? preference.editorialNote
+  const routeOptions = [firstRoute, middleRoute, lastRoute].filter(Boolean)
+  const getRouteOption = (index: number, fallback: string) => routeOptions[index % routeOptions.length] ?? fallback
+  const createPlanDayStops = (dayNumber: number): PlanStop[] => {
+    const isFirstDay = dayNumber === 1
+
+    return [
+      {
+        time: '아침',
+        move: isLessWalking ? '12분' : '18분',
+        title: isFirstDay
+          ? isLessWalking
+            ? '가볍게 도착하고 가까운 동네부터 보기'
+            : '가볍게 도착하고 동네 감 잡기'
+          : `${dayNumber}일차 아침 컨디션 맞추기`,
+        body: isFirstDay ? firstRoute : getRouteOption(dayNumber - 1, firstRoute),
+        reason: isFirstDay
+          ? cityContext
+            ? '선택한 소도시의 첫 동선 단서를 기준으로 여행 분위기를 빠르게 잡습니다.'
+            : '첫 장소는 걷는 부담보다 여행 분위기를 잡는 데 집중합니다.'
+          : '전날 이동 피로를 줄이고 가까운 장소부터 천천히 다시 시작합니다.',
+      },
+      {
+        time: '점심',
+        move: isLessWalking ? '16분' : '24분',
+        title: isFirstDay
+          ? isArtFocused
+            ? '전시와 편집숍을 한 동선 안에 묶기'
+            : '취향에 맞는 핵심 장소 둘러보기'
+          : `${preference.tag} 테마를 더 깊게 보기`,
+        body: isFirstDay
+          ? cityContext
+            ? middleRoute
+            : isArtFocused
+              ? '전시 공간 · 편집숍 · 쉬어가는 카페를 한 구역에 묶어 봅니다.'
+              : preference.description
+          : getRouteOption(dayNumber, middleRoute),
+        reason: isFirstDay
+          ? cityContext
+            ? '상세 패널에서 고른 장소 흐름을 오후 핵심 동선으로 이어갑니다.'
+            : isArtFocused
+              ? '선택한 예술 취향이 가장 잘 드러나는 장소를 이동이 짧은 순서로 배치합니다.'
+              : '선택한 취향이 가장 잘 드러나는 장소를 중간에 배치합니다.'
+          : '선택한 테마가 반복해서 보이는 장소를 중간 시간대에 배치합니다.',
+      },
+      {
+        time: '저녁',
+        move: isLessWalking ? '10분' : '15분',
+        title: isFirstDay ? '무리하지 않는 마무리 동선' : `${dayNumber}일차를 느슨하게 정리하기`,
+        body: isFirstDay ? lastRoute : getRouteOption(dayNumber + 1, lastRoute),
+        reason: isFirstDay
+          ? '마지막에는 이동을 줄이고 쉬어갈 수 있는 여백을 둡니다.'
+          : '숙소 복귀 전 이동을 줄이고 다음 날 일정을 조정할 여백을 남깁니다.',
+      },
+    ]
+  }
+  const days: PlanDay[] = Array.from({ length: dayCount }, (_, dayIndex) => {
+    const dayNumber = dayIndex + 1
+
+    return {
+      day: dayNumber,
+      title: `${dayNumber}일차 추천 일정`,
+      summary:
+        dayNumber === 1
+          ? '도착 후 첫 인상과 핵심 테마를 확인하는 흐름입니다.'
+          : `${dayNumber}일차는 전날보다 동선을 좁히고 선택 테마를 더 깊게 보는 흐름입니다.`,
+      stops: createPlanDayStops(dayNumber),
+    }
+  })
 
   return {
     durationLabel,
@@ -935,39 +1012,8 @@ const createPlanDraft = (
     intensityLabel,
     festivalThemeLabel: getPlanFestivalThemeLabel(festivalThemeChoice, cityContext),
     summary: `${baseSummary} ${festivalThemeSummary}`,
-    stops: [
-      {
-        time: '오전',
-        move: isLessWalking ? '12분' : '18분',
-        title: isLessWalking ? '가볍게 도착하고 가까운 동네부터 보기' : '가볍게 도착하고 동네 감 잡기',
-        body: firstRoute,
-        reason: cityContext
-          ? '선택한 소도시의 첫 동선 단서를 기준으로 여행 분위기를 빠르게 잡습니다.'
-          : '첫 장소는 걷는 부담보다 여행 분위기를 잡는 데 집중합니다.',
-      },
-      {
-        time: '오후',
-        move: isLessWalking ? '16분' : '24분',
-        title: isArtFocused ? '전시와 편집숍을 한 동선 안에 묶기' : '취향에 맞는 핵심 장소 둘러보기',
-        body: cityContext
-          ? middleRoute
-          : isArtFocused
-            ? '전시 공간 · 편집숍 · 쉬어가는 카페를 한 구역에 묶어 봅니다.'
-            : preference.description,
-        reason: cityContext
-          ? '상세 패널에서 고른 장소 흐름을 오후 핵심 동선으로 이어갑니다.'
-          : isArtFocused
-            ? '선택한 예술 취향이 가장 잘 드러나는 장소를 이동이 짧은 순서로 배치합니다.'
-            : '선택한 취향이 가장 잘 드러나는 장소를 중간에 배치합니다.',
-      },
-      {
-        time: '저녁',
-        move: isLessWalking ? '10분' : '15분',
-        title: '무리하지 않는 마무리 동선',
-        body: lastRoute,
-        reason: '마지막에는 이동을 줄이고 쉬어갈 수 있는 여백을 둡니다.',
-      },
-    ],
+    days,
+    stops: days.flatMap((day) => day.stops),
   }
 }
 
@@ -1385,6 +1431,7 @@ function App() {
       festivalThemeLabel: planDraft.festivalThemeLabel,
       intensityLabel: planDraft.intensityLabel,
       summary: planDraft.summary,
+      days: planDraft.days,
       stops: planDraft.stops,
       createdAt: savedAt,
       savedAt,
@@ -2125,52 +2172,80 @@ function App() {
         <div className="px-6 py-6">
           <div className="grid grid-cols-[1fr_auto] items-start gap-4 max-md:grid-cols-1">
             <div>
-              <p className="text-sm font-bold text-[#33271E]">1일차 추천 일정</p>
+              <p className="text-sm font-bold text-[#33271E]">일차별 추천 일정</p>
               <h4 className="mt-2 break-keep text-xl font-bold leading-7 text-[#33271E] max-sm:text-lg max-sm:leading-6">
                 {currentPlanTitle}
               </h4>
               <p className="mt-2 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
-                장소를 확정하기 전, 취향에 맞는 첫날 흐름과 이동 강도를 먼저 확인합니다.{' '}
+                장소를 확정하기 전, 취향에 맞는 전체 여행 흐름과 이동 강도를 먼저 확인합니다.{' '}
                 {planDraft.summary}
               </p>
             </div>
             <span className="rounded-full bg-[#FFF0E4] px-4 py-2 text-[12px] font-bold text-[#33271E]">
-              코스 3개
+              총 {planDraft.stops.length}개 코스
             </span>
           </div>
 
-          <div className="mt-6 space-y-4">
-            {planDraft.stops.map((item, index) => (
-              <article key={item.time} className="grid grid-cols-[38px_minmax(0,1fr)] gap-4">
-                <div className="flex flex-col items-center">
-                    <span className="flex size-9 items-center justify-center rounded-full bg-[#F36B12] text-sm font-black text-[#33271E] shadow-[0_8px_18px_-14px_rgba(51,39,30,0.5)]">
-                    {index + 1}
-                  </span>
-                  {index < 2 ? <span className="mt-2 h-full w-px bg-[#F3B489]/45" /> : null}
-                </div>
-                <div className="min-w-0 rounded-[18px] border border-transparent bg-[#FFF0E4] p-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-bold leading-4 text-[#33271E]">
-                      {item.time}
-                    </span>
-                    <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-semibold leading-4 text-[#33271E]">
-                      다음 장소까지 {item.move}
-                    </span>
-                  </div>
-                  <h5 className="mt-4 break-keep text-lg font-bold leading-7 text-[#33271E] max-sm:text-base max-sm:leading-6">
-                    {item.title}
-                  </h5>
-                  <p className="mt-2 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
-                    {item.body}
-                  </p>
-                  <div className="mt-4 rounded-[14px] border border-transparent bg-[#fffffa] px-4 py-3">
-                    <p className="text-[12px] font-bold text-[#33271E]">추천 이유</p>
-                    <p className="mt-1 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
-                      {item.reason}
+          <div className="mt-6 space-y-7">
+            {planDraft.days.map((day) => (
+              <section key={day.day} aria-labelledby={`generated-plan-day-${day.day}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3 rounded-[18px] bg-[#FFF7F0] px-5 py-4">
+                  <div>
+                    <h5
+                      id={`generated-plan-day-${day.day}`}
+                      className="break-keep text-lg font-black leading-7 text-[#33271E] max-sm:text-base"
+                    >
+                      {day.title}
+                    </h5>
+                    <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]/75">
+                      {day.summary}
                     </p>
                   </div>
+                  <span className="rounded-full bg-[#fffffa] px-4 py-2 text-[12px] font-bold text-[#33271E]">
+                    {day.stops.length}개 코스
+                  </span>
                 </div>
-              </article>
+
+                <div className="mt-4 space-y-4">
+                  {day.stops.map((item, index) => (
+                    <article
+                      key={`${day.day}-${item.time}`}
+                      className="grid grid-cols-[38px_minmax(0,1fr)] gap-4"
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="flex size-9 items-center justify-center rounded-full bg-[#F36B12] text-sm font-black text-[#33271E] shadow-[0_8px_18px_-14px_rgba(51,39,30,0.5)]">
+                          {index + 1}
+                        </span>
+                        {index < day.stops.length - 1 ? (
+                          <span className="mt-2 h-full w-px bg-[#F3B489]/45" />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 rounded-[18px] border border-transparent bg-[#FFF0E4] p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-bold leading-4 text-[#33271E]">
+                            {item.time}
+                          </span>
+                          <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-semibold leading-4 text-[#33271E]">
+                            다음 장소까지 {item.move}
+                          </span>
+                        </div>
+                        <h6 className="mt-4 break-keep text-lg font-bold leading-7 text-[#33271E] max-sm:text-base max-sm:leading-6">
+                          {item.title}
+                        </h6>
+                        <p className="mt-2 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
+                          {item.body}
+                        </p>
+                        <div className="mt-4 rounded-[14px] border border-transparent bg-[#fffffa] px-4 py-3">
+                          <p className="text-[12px] font-bold text-[#33271E]">추천 이유</p>
+                          <p className="mt-1 break-keep text-sm leading-6 text-[#33271E] max-sm:text-[13px]">
+                            {item.reason}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
 
@@ -2882,9 +2957,9 @@ function App() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black text-[#33271E]">시간대별 흐름</p>
+                  <p className="text-sm font-black text-[#33271E]">일차별 시간대 흐름</p>
                   <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]/75">
-                    현재 대화에서 정리한 조건으로 만든 일정 초안입니다.
+                    현재 대화에서 정리한 조건으로 만든 전체 일정 초안입니다.
                   </p>
                 </div>
                 <span className="rounded-full border border-[#A92B10] bg-[#F36B12] px-4 py-2 text-[12px] font-black text-[#33271E]">
@@ -2892,43 +2967,66 @@ function App() {
                 </span>
               </div>
 
-              <div className="mt-7 space-y-4">
-                {planDraft.stops.map((item, index) => (
-                  <article
-                    key={`${item.time}-${item.title}`}
-                    className="grid grid-cols-[42px_minmax(0,1fr)] gap-4"
-                  >
-                    <div className="flex flex-col items-center">
-                      <span className="flex size-10 items-center justify-center rounded-full bg-[#F36B12] text-sm font-black text-[#33271E] shadow-[0_8px_18px_-14px_rgba(51,39,30,0.5)]">
-                        {index + 1}
-                      </span>
-                      {index < planDraft.stops.length - 1 ? (
-                        <span className="mt-2 h-full min-h-8 w-px bg-[#F3B489]/45" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 rounded-[20px] border border-transparent bg-[#FFF0E4] p-5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-black leading-4 text-[#33271E]">
-                          {item.time}
-                        </span>
-                        <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-bold leading-4 text-[#33271E]">
-                          다음 장소까지 {item.move}
-                        </span>
-                      </div>
-                      <h3 className="mt-4 break-keep text-xl font-black leading-8 text-[#33271E] max-sm:text-lg max-sm:leading-7">
-                        {item.title}
-                      </h3>
-                      <p className="mt-2 break-keep text-sm font-semibold leading-7 text-[#33271E]">
-                        {item.body}
-                      </p>
-                      <div className="mt-4 rounded-[16px] border border-transparent bg-[#fffffa] px-4 py-3">
-                        <p className="text-[12px] font-black text-[#A92B10]">추천 이유</p>
-                        <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]">
-                          {item.reason}
+              <div className="mt-7 space-y-7">
+                {planDraft.days.map((day) => (
+                  <section key={day.day} aria-labelledby={`plan-detail-day-${day.day}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3 rounded-[18px] bg-[#FFF7F0] px-5 py-4">
+                      <div className="min-w-0">
+                        <h3
+                          id={`plan-detail-day-${day.day}`}
+                          className="break-keep text-lg font-black leading-7 text-[#33271E]"
+                        >
+                          {day.title}
+                        </h3>
+                        <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]/75">
+                          {day.summary}
                         </p>
                       </div>
+                      <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-black leading-4 text-[#33271E]">
+                        {day.stops.length}개 코스
+                      </span>
                     </div>
-                  </article>
+
+                    <div className="mt-4 space-y-4">
+                      {day.stops.map((item, index) => (
+                        <article
+                          key={`${day.day}-${item.time}-${item.title}`}
+                          className="grid grid-cols-[42px_minmax(0,1fr)] gap-4"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="flex size-10 items-center justify-center rounded-full bg-[#F36B12] text-sm font-black text-[#33271E] shadow-[0_8px_18px_-14px_rgba(51,39,30,0.5)]">
+                              {index + 1}
+                            </span>
+                            {index < day.stops.length - 1 ? (
+                              <span className="mt-2 h-full min-h-8 w-px bg-[#F3B489]/45" />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 rounded-[20px] border border-transparent bg-[#FFF0E4] p-5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-black leading-4 text-[#33271E]">
+                                {item.time}
+                              </span>
+                              <span className="rounded-full bg-[#fffffa] px-3 py-1 text-[12px] font-bold leading-4 text-[#33271E]">
+                                다음 장소까지 {item.move}
+                              </span>
+                            </div>
+                            <h4 className="mt-4 break-keep text-xl font-black leading-8 text-[#33271E] max-sm:text-lg max-sm:leading-7">
+                              {item.title}
+                            </h4>
+                            <p className="mt-2 break-keep text-sm font-semibold leading-7 text-[#33271E]">
+                              {item.body}
+                            </p>
+                            <div className="mt-4 rounded-[16px] border border-transparent bg-[#fffffa] px-4 py-3">
+                              <p className="text-[12px] font-black text-[#A92B10]">추천 이유</p>
+                              <p className="mt-1 break-keep text-sm font-semibold leading-6 text-[#33271E]">
+                                {item.reason}
+                              </p>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </div>
@@ -3758,6 +3856,15 @@ function App() {
               aria-labelledby="mypage-title"
               className="mx-auto min-h-dvh max-w-[1440px] px-16 pb-16 pt-28 max-lg:px-8 max-sm:px-5"
             >
+              <div className="mb-5 flex justify-start">
+                <button
+                  type="button"
+                  onClick={goHome}
+                  className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#F3B489] bg-[#fffffa] px-5 text-sm font-bold text-[#33271E] transition hover:border-[#F36B12] hover:bg-[#FFE0CA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33271E]"
+                >
+                  ← 이전으로 돌아가기
+                </button>
+              </div>
               <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(320px,0.55fr)] gap-6 max-lg:grid-cols-1">
                 <section className="rounded-[22px] border border-transparent bg-[#fffffa] p-7 shadow-[0_14px_36px_-24px_rgba(51,39,30,0.28)]">
                   <p className="text-sm font-black uppercase tracking-[0.18em] text-[#F36B12]">

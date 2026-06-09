@@ -528,7 +528,20 @@ describe('MVP main entry screen', () => {
     expect(screen.getByText(/API 호출 없이 더미 사용자만 저장 중입니다/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '취향 다시 고르기' })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: '로그아웃' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '← 이전으로 돌아가기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '메인으로 돌아가기' })).toBeInTheDocument()
+  })
+
+  it('returns from My Page to the home view from the top action', () => {
+    seedUser()
+    seedPreference('경주 · 교토')
+    render(<App />)
+
+    openMyPageFromSessionMenu()
+    fireEvent.click(screen.getByRole('button', { name: '← 이전으로 돌아가기' }))
+
+    expect(window.location.search).toBe('?view=home')
+    expect(screen.getByRole('heading', { name: /당신이 몰랐던/ })).toBeInTheDocument()
   })
 
   it('opens preference edit from My Page and keeps the old preference when canceled', () => {
@@ -1024,6 +1037,8 @@ describe('MVP main entry screen', () => {
       }
     })
     expect(screen.getByText('5일 구성')).toBeInTheDocument()
+    expect(screen.getByText('5일차 추천 일정')).toBeInTheDocument()
+    expect(screen.getByText('총 15개 코스')).toBeInTheDocument()
     const chatLog = screen.getByRole('log', { name: 'AI 일정 대화' })
 
     expect(within(chatLog).queryByText('일정 기간을 먼저 골라주세요')).not.toBeInTheDocument()
@@ -1061,6 +1076,8 @@ describe('MVP main entry screen', () => {
     const savedPlans = JSON.parse(localStorage.getItem('lovv.savedPlans') ?? '[]')
 
     expect(savedPlans).toHaveLength(1)
+    expect(savedPlans[0].days).toHaveLength(3)
+    expect(savedPlans[0].stops).toHaveLength(9)
     expect(savedPlans[0]).toMatchObject({
       ownerId: 'mock-google-user',
       title: '온천·휴양 2박 3일 초안',
@@ -1103,11 +1120,14 @@ describe('MVP main entry screen', () => {
     expect(within(detailView).getByText('2박 3일')).toBeInTheDocument()
     expect(within(detailView).getByText('축제 포함')).toBeInTheDocument()
     expect(within(detailView).getByText('덜 걷는 일정')).toBeInTheDocument()
+    expect(within(detailView).getByText('1일차 추천 일정')).toBeInTheDocument()
+    expect(within(detailView).getByText('2일차 추천 일정')).toBeInTheDocument()
+    expect(within(detailView).getByText('3일차 추천 일정')).toBeInTheDocument()
     expect(within(detailView).getByText('가볍게 도착하고 가까운 동네부터 보기')).toBeInTheDocument()
     expect(within(detailView).getByText('취향에 맞는 핵심 장소 둘러보기')).toBeInTheDocument()
     expect(within(detailView).getByText('무리하지 않는 마무리 동선')).toBeInTheDocument()
-    expect(within(detailView).getAllByText('추천 이유')).toHaveLength(3)
-    expect(within(detailView).getByText('다음 장소까지 12분')).toBeInTheDocument()
+    expect(within(detailView).getAllByText('추천 이유')).toHaveLength(9)
+    expect(within(detailView).getAllByText('다음 장소까지 12분').length).toBeGreaterThanOrEqual(1)
 
     fireEvent.click(within(detailView).getByRole('button', { name: '좋아요' }))
     fireEvent.click(within(detailView).getByRole('button', { name: '마이페이지에 저장' }))
