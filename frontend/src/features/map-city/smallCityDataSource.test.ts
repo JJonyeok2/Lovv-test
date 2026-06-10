@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest'
 import {
   createSmallCityCatalogErrorState,
   createSmallCityCatalogLoadingState,
+  createStaticSmallCityDetailState,
   createStaticSmallCityApiRecord,
   createStaticSmallCityApiResponse,
   createStaticSmallCityCatalogState,
+  loadStaticSmallCityDetail,
   loadStaticSmallCityCatalog,
   staticSmallCityCatalogSource,
 } from './smallCityDataSource'
-import { smallCities } from './smallCities'
+import { smallCities, smallCityPlaceCategories } from './smallCities'
 
 describe('small-city data source boundary', () => {
   it('wraps the static city catalog as API-shaped records', () => {
@@ -36,7 +38,7 @@ describe('small-city data source boundary', () => {
     const state = createStaticSmallCityCatalogState()
 
     expect(state.status).toBe('success')
-    expect(state.cities).toHaveLength(19)
+    expect(state.cities).toHaveLength(46)
     expect(state.rejectedRecords).toHaveLength(0)
     expect(state.queryKey).toBe('page=1&page_size=120')
   })
@@ -59,6 +61,32 @@ describe('small-city data source boundary', () => {
     })
   })
 
+  it('creates static city detail state with place groups for Kakao-shaped categories', async () => {
+    const gyeongju = smallCities.find((city) => city.nameKo === '경주')
+    expect(gyeongju).toBeDefined()
+
+    const state = createStaticSmallCityDetailState(gyeongju!.id)
+    const loadedState = await loadStaticSmallCityDetail(gyeongju!.id)
+
+    expect(state.status).toBe('success')
+    expect(loadedState.status).toBe('success')
+    expect(state.detail?.city.nameKo).toBe('경주')
+    expect(Object.keys(state.detail!.placesByCategory)).toEqual(smallCityPlaceCategories)
+    smallCityPlaceCategories.forEach((category) => {
+      expect(state.detail!.placesByCategory[category]).toHaveLength(1)
+      expect(state.detail!.placesByCategory[category][0]).toMatchObject({
+        cityId: gyeongju!.id,
+        category,
+        categoryName: category,
+        placeUrl: expect.stringContaining('https://place.map.kakao.com/'),
+      })
+    })
+    expect(state.detail!.placesByCategory['관광지'][0].name).toContain('황리단길')
+    expect(state.detail!.placesByCategory['음식점'][0].name).toContain('경주')
+    expect(state.detail!.placesByCategory['카페'][0].name).toContain('경주')
+    expect(state.detail!.placesByCategory['숙소'][0].name).toContain('경주')
+  })
+
   it('keeps the Korean art filter populated in visible map regions', async () => {
     const state = await loadStaticSmallCityCatalog({
       country: 'KR',
@@ -70,6 +98,24 @@ describe('small-city data source boundary', () => {
     expect(state.queryKey).toBe('country=KR&themes=%EC%98%88%EC%88%A0&page=1&page_size=80')
     expect(state.cities.map((city) => city.nameKo)).toEqual(expect.arrayContaining(['문경', '평창']))
     expect(state.cities.every((city) => city.themes.includes('예술'))).toBe(true)
+  })
+
+  it('keeps static festival data separate from theme-only festival tags', () => {
+    const yangyang = smallCities.find((city) => city.nameKo === '양양')
+    const jinju = smallCities.find((city) => city.nameKo === '진주')
+
+    expect(yangyang).toBeDefined()
+    expect(jinju).toBeDefined()
+    expect(yangyang!.themes).toContain('축제')
+    expect(yangyang!.festivalCount).toBe(0)
+
+    const jinjuDetail = createStaticSmallCityDetailState(jinju!.id)
+
+    expect(jinju!.festivalCount).toBe(1)
+    expect(jinjuDetail.status).toBe('success')
+    expect(jinjuDetail.detail?.festivalCount).toBe(1)
+    expect(jinjuDetail.detail?.festivals[0].name).toBe('진주남강유등축제')
+    expect(jinjuDetail.detail?.placesByCategory['관광지'].some((place) => place.categoryName === '축제')).toBe(true)
   })
 
   it('represents empty, loading, and error states explicitly', () => {

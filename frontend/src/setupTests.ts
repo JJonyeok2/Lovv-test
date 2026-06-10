@@ -5,5 +5,6 @@ import { afterEach } from 'vitest'
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  window.google = undefined
   window.history.replaceState(null, '', '/')
 })

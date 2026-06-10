@@ -274,24 +274,16 @@ body {
   pointer-events: none;
 }
 
-.lovv-leaflet-map {
+.lovv-google-map {
   font-family: var(--lovv-font-sans);
   z-index: 0;
 }
 
-.lovv-leaflet-map .leaflet-tile {
-  filter: saturate(0.94) contrast(0.98);
-}
-
-.lovv-leaflet-map .leaflet-tooltip {
-  border: 0;
-  border-radius: 5px;
-  box-shadow: 0 10px 24px -18px rgb(51 39 30 / 0.55);
-  color: #33271E;
-  font-family: var(--lovv-font-sans);
-  font-size: 11px;
-  font-weight: 900;
-  padding: 3px 7px;
+.lovv-google-map-fallback {
+  background:
+    linear-gradient(135deg, rgb(255 248 246 / 0.72), rgb(255 224 202 / 0.58)),
+    repeating-linear-gradient(0deg, rgb(169 43 16 / 0.08) 0 1px, transparent 1px 58px),
+    repeating-linear-gradient(90deg, rgb(169 43 16 / 0.08) 0 1px, transparent 1px 58px);
 }
 
 .lovv-hero-theme-glow {
