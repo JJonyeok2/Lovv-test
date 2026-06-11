@@ -10,11 +10,20 @@ import {
   type SmallCityCountry,
   type SmallCityTheme,
 } from '../../features/map-city/smallCities'
+import { lovvApiRequest, type LovvApiRequestOptions } from './httpClient'
 
 export const smallCityApiEndpoints = {
   list: '/api/small-cities',
   detail: (cityId: string) => `/api/small-cities/${encodeURIComponent(cityId)}`,
   places: (cityId: string) => `/api/small-cities/${encodeURIComponent(cityId)}/places`,
+} as const
+
+export const mapCityApiEndpoints = {
+  markers: '/api/v1/map/markers',
+  list: '/api/v1/map/cities',
+  detail: (cityId: string) => `/api/v1/map/cities/${encodeURIComponent(cityId)}`,
+  places: (cityId: string) => `/api/v1/map/cities/${encodeURIComponent(cityId)}/places`,
+  seasonality: (cityId: string) => `/api/v1/map/cities/${encodeURIComponent(cityId)}/seasonality`,
 } as const
 
 export const defaultSmallCityApiPageSize = 120
@@ -134,6 +143,22 @@ export type SmallCityApiDetailResponse = {
   places?: SmallCityApiPlacesPayload
 }
 
+export type SmallCityApiMonthlySeasonality = {
+  month: number
+  weatherSummary: string
+  visitorTrend: string
+  festivalCount: number
+  score: number
+  notes: string[]
+}
+
+export type SmallCityApiSeasonalityResponse = {
+  cityId: string
+  recommendedMonths: number[]
+  cautionMonths: number[]
+  monthly: SmallCityApiMonthlySeasonality[]
+}
+
 export type SmallCityApiRejectedRecord = {
   id: string | null
   reason: string
@@ -154,6 +179,11 @@ export type SmallCityApiPlacesAdapterResult = {
   placesByCategory: SmallCityPlaceGroups
   festivals: SmallCityFestival[]
   festivalCount: number
+  rejectedRecords: SmallCityApiRejectedRecord[]
+}
+
+export type SmallCityApiSeasonalityAdapterResult = {
+  seasonality: SmallCityApiSeasonalityResponse
   rejectedRecords: SmallCityApiRejectedRecord[]
 }
 
@@ -694,6 +724,73 @@ export const adaptSmallCityDetailApiResponse = (
   }
 }
 
+const normalizeMonth = (value: unknown) =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 12 ? value : null
+
+const normalizeSeasonalityMonth = (
+  record: Partial<SmallCityApiMonthlySeasonality>,
+): SmallCityApiMonthlySeasonality | null => {
+  const month = normalizeMonth(record.month)
+
+  if (month === null) {
+    return null
+  }
+
+  return {
+    month,
+    weatherSummary: normalizeOptionalString(record.weatherSummary) ?? 'unknown',
+    visitorTrend: normalizeOptionalString(record.visitorTrend) ?? 'unknown',
+    festivalCount:
+      typeof record.festivalCount === 'number' && Number.isFinite(record.festivalCount)
+        ? Math.max(0, Math.trunc(record.festivalCount))
+        : 0,
+    score:
+      typeof record.score === 'number' && Number.isFinite(record.score)
+        ? Math.max(0, Math.min(100, Math.trunc(record.score)))
+        : 50,
+    notes: normalizeStringArray(record.notes),
+  }
+}
+
+export const adaptSmallCitySeasonalityApiResponse = (
+  response: SmallCityApiSeasonalityResponse,
+): SmallCityApiSeasonalityAdapterResult => {
+  const cityId = normalizeRequiredString(response.cityId)
+  const monthly = Array.isArray(response.monthly)
+    ? response.monthly
+        .map(normalizeSeasonalityMonth)
+        .filter((record): record is SmallCityApiMonthlySeasonality => record !== null)
+    : []
+  const recommendedMonths = normalizeNumberArray(response.recommendedMonths).filter(
+    (month) => normalizeMonth(month) !== null,
+  )
+  const cautionMonths = normalizeNumberArray(response.cautionMonths).filter(
+    (month) => normalizeMonth(month) !== null,
+  )
+
+  if (!cityId) {
+    return {
+      seasonality: {
+        cityId: '',
+        recommendedMonths: [],
+        cautionMonths: [],
+        monthly,
+      },
+      rejectedRecords: [{ id: null, reason: 'missing city id' }],
+    }
+  }
+
+  return {
+    seasonality: {
+      cityId,
+      recommendedMonths,
+      cautionMonths,
+      monthly,
+    },
+    rejectedRecords: [],
+  }
+}
+
 export const createSmallCityApiQuery = ({
   country,
   query,
@@ -720,3 +817,29 @@ export const createSmallCityApiQuery = ({
 
   return params.toString()
 }
+
+const withQuery = (path: string, query: string) => (query ? `${path}?${query}` : path)
+
+export const getSmallCityList = (
+  params: SmallCityApiListParams = {},
+  options: LovvApiRequestOptions = {},
+) =>
+  lovvApiRequest<SmallCityApiListResponse>(
+    withQuery(smallCityApiEndpoints.list, createSmallCityApiQuery(params)),
+    options,
+  )
+
+export const getSmallCityDetail = (
+  cityId: string,
+  options: LovvApiRequestOptions = {},
+) => lovvApiRequest<SmallCityApiDetailResponse>(smallCityApiEndpoints.detail(cityId), options)
+
+export const getSmallCityPlaces = (
+  cityId: string,
+  options: LovvApiRequestOptions = {},
+) => lovvApiRequest<SmallCityApiPlacesResponse>(smallCityApiEndpoints.places(cityId), options)
+
+export const getMapCitySeasonality = (
+  cityId: string,
+  options: LovvApiRequestOptions = {},
+) => lovvApiRequest<SmallCityApiSeasonalityResponse>(mapCityApiEndpoints.seasonality(cityId), options)

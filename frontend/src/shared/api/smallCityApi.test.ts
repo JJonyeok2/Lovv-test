@@ -3,12 +3,15 @@ import {
   adaptSmallCityDetailApiResponse,
   adaptSmallCityApiResponse,
   adaptSmallCityPlacesApiResponse,
+  adaptSmallCitySeasonalityApiResponse,
   createSmallCityApiQuery,
   defaultSmallCityApiPageSize,
+  mapCityApiEndpoints,
   smallCityApiEndpoints,
   type SmallCityApiDetailResponse,
   type SmallCityApiListResponse,
   type SmallCityApiPlacesResponse,
+  type SmallCityApiSeasonalityResponse,
 } from './smallCityApi'
 import { createSmallCityMapMarkers, smallCityPlaceCategories } from '../../features/map-city/smallCities'
 
@@ -285,6 +288,7 @@ describe('small-city API contract adapter', () => {
     expect(smallCityApiEndpoints.list).toBe('/api/small-cities')
     expect(smallCityApiEndpoints.detail('jp/shimanto 001')).toBe('/api/small-cities/jp%2Fshimanto%20001')
     expect(smallCityApiEndpoints.places('jp/shimanto 001')).toBe('/api/small-cities/jp%2Fshimanto%20001/places')
+    expect(mapCityApiEndpoints.seasonality('KR/Gangneung')).toBe('/api/v1/map/cities/KR%2FGangneung/seasonality')
     expect(smallCityApiEndpoints).not.toHaveProperty('searchPlaces')
     expect(
       createSmallCityApiQuery({
@@ -296,5 +300,55 @@ describe('small-city API contract adapter', () => {
       }),
     ).toBe('country=JP&q=%EC%8B%9C%EB%A7%8C%ED%86%A0+%EC%8B%9C%EC%9E%A5&themes=%EC%9E%90%EC%97%B0%2C%EB%B0%94%EB%8B%A4&page=2&page_size=80')
     expect(createSmallCityApiQuery({})).toBe(`page=1&page_size=${defaultSmallCityApiPageSize}`)
+  })
+
+  it('adapts seasonality monthly response and rejects missing city ids', () => {
+    const response: SmallCityApiSeasonalityResponse = {
+      cityId: 'KR-Gangneung',
+      recommendedMonths: [5, 6, 13],
+      cautionMonths: [1, 0],
+      monthly: [
+        {
+          month: 6,
+          weatherSummary: 'mild',
+          visitorTrend: 'high',
+          festivalCount: 2,
+          score: 84,
+          notes: ['festival season'],
+        },
+        {
+          month: 13,
+          weatherSummary: 'invalid',
+          visitorTrend: 'unknown',
+          festivalCount: -1,
+          score: 120,
+          notes: [],
+        },
+      ],
+    }
+
+    const result = adaptSmallCitySeasonalityApiResponse(response)
+    const missingCity = adaptSmallCitySeasonalityApiResponse({
+      ...response,
+      cityId: '',
+    })
+
+    expect(result.rejectedRecords).toHaveLength(0)
+    expect(result.seasonality).toEqual({
+      cityId: 'KR-Gangneung',
+      recommendedMonths: [5, 6],
+      cautionMonths: [1],
+      monthly: [
+        {
+          month: 6,
+          weatherSummary: 'mild',
+          visitorTrend: 'high',
+          festivalCount: 2,
+          score: 84,
+          notes: ['festival season'],
+        },
+      ],
+    })
+    expect(missingCity.rejectedRecords).toEqual([{ id: null, reason: 'missing city id' }])
   })
 })
